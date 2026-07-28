@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 type InitialData = {
   products: any[];
   gifts: any[];
-  bundlings?: any[];
   payment_methods: any[];
   no_payment_methods: any[];
   warehouses: any[];

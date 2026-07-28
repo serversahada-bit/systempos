@@ -229,7 +229,7 @@ export default function LandingPage() {
                   </td>
                   <td className="px-6 py-4 align-top">
                     <div className="flex flex-wrap gap-2">
-                      {row.tags.map((tag, tIndex) => (
+                      {row.tags.map((tag: string, tIndex: number) => (
                         <span key={tIndex} className="inline-block px-2 py-1 bg-purple-50 text-purple-600 rounded text-xs font-semibold uppercase tracking-wider">
                           {tag}
                         </span>
