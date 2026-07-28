@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     while (hasNext && pageCount < MAX_PAGES) {
       pageCount++;
-      const url = nextCursor 
+      const url: string = nextCursor 
         ? `${baseUrl.replace(/\/+$/, '')}/bundles?next_cursor=${encodeURIComponent(nextCursor)}`
         : `${baseUrl.replace(/\/+$/, '')}/bundles`;
       
