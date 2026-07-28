@@ -8,15 +8,18 @@ import { useAuth } from '@/contexts/AuthContext';
 type InitialData = {
   products: any[];
   gifts: any[];
+  bundlings?: any[];
+  payment_methods: any[];
+  no_payment_methods: any[];
   warehouses: any[];
-  paymentAccounts: any[];
-  noPaymentMethods: any[];
   promos: any[];
   advertisers: any[];
   adSources: any[];
   ongkirSettings: any[];
   shippingWeightSettings: any;
   courierWeightRules: any;
+  paymentAccounts: any[];
+  noPaymentMethods: any[];
   stockData: Record<number, Record<number, number>>;
   giftStockData: Record<number, Record<number, number>>;
   bundlings: any[];
@@ -55,6 +58,10 @@ export default function BuatPesananPage() {
   const [productSearchKeyword, setProductSearchKeyword] = useState('');
   const [giftSearchKeyword, setGiftSearchKeyword] = useState('');
   const [bundlingSearchKeyword, setBundlingSearchKeyword] = useState('');
+
+  const filteredBundlings = (data?.bundlings || []).filter((b: any) => 
+    b.bundle_name?.toLowerCase().includes(bundlingSearchKeyword.toLowerCase())
+  );
 
   // Form States
   const [customerId, setCustomerId] = useState('');

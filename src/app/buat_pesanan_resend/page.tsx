@@ -56,6 +56,10 @@ export default function BuatPesananPage() {
   const [giftSearchKeyword, setGiftSearchKeyword] = useState('');
   const [bundlingSearchKeyword, setBundlingSearchKeyword] = useState('');
 
+  const filteredBundlings = (data?.bundlings || []).filter((b: any) => 
+    b.bundle_name?.toLowerCase().includes(bundlingSearchKeyword.toLowerCase())
+  );
+
   // Form States
   const [customerId, setCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
