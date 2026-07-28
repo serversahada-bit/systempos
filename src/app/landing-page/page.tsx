@@ -325,35 +325,43 @@ export default function LandingPage() {
       </div>
       {/* Modals */}
       {showDomainModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg w-full max-w-md overflow-hidden shadow-xl">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <Settings size={18} className="text-purple-600" />
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 font-sans">
+          <div className="bg-white rounded shadow-xl w-full max-w-md flex flex-col">
+            <div className="px-6 py-4">
+              <h2 className="text-lg font-bold text-gray-800">
                 Setting Base Domain
-              </h3>
-              <button onClick={() => setShowDomainModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+              </h2>
             </div>
-            <div className="p-6">
+            <div className="px-6 pb-6">
               <p className="text-sm text-gray-600 mb-4">
                 Masukkan domain utama Anda (misal: <strong>domainanda.com</strong>). 
                 Pastikan Anda sudah mengarahkan Wildcard A Record (*) di DNS Management domain Anda ke IP VPS ini.
               </p>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Base Domain</label>
+                <label className="block text-[13px] font-semibold text-gray-700 mb-1">
+                  Base Domain <span className="text-red-500">*</span>
+                </label>
                 <input 
                   type="text" 
                   value={baseDomain}
                   onChange={e => setBaseDomain(e.target.value)}
-                  placeholder="contoh: domainanda.com" 
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-1 focus:ring-purple-500 outline-none text-sm"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-colors"
                 />
               </div>
             </div>
-            <div className="p-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-              <button onClick={() => setShowDomainModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">Batal</button>
-              <button onClick={handleSaveDomain} disabled={isSavingDomain} className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2">
-                {isSavingDomain ? 'Menyimpan...' : 'Simpan Pengaturan'}
+            <div className="px-6 pb-6 pt-2 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowDomainModal(false)} 
+                className="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveDomain} 
+                disabled={isSavingDomain} 
+                className="px-4 py-2 text-[13px] font-medium text-white bg-[#0ea5e9] hover:bg-[#0284c7] rounded transition-colors disabled:opacity-50"
+              >
+                {isSavingDomain ? 'Menyimpan...' : 'Save'}
               </button>
             </div>
           </div>

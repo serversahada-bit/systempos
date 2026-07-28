@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import { Copy, RefreshCw, Trash2, Globe, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Copy, RefreshCw, Trash2, Globe, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 interface CustomDomainModalProps {
   isOpen: boolean;
@@ -118,169 +118,189 @@ export default function CustomDomainModal({ isOpen, onClose, landingPage, onSucc
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 font-sans">
+      <div className={`bg-white rounded shadow-xl w-full flex flex-col ${!hostnameId ? 'max-w-md' : 'max-w-2xl'}`}>
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Globe className="text-purple-600" />
-            Domain Pribadi
+        <div className="px-6 py-4">
+          <h2 className="text-lg font-bold text-gray-800">
+            {!hostnameId ? 'Tambah Domain' : `Domain ${cfDomain}`}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-6 overflow-y-auto">
+        <div className="px-6 pb-6 overflow-y-auto max-h-[70vh]">
           {!hostnameId ? (
             // Form Tambah Domain
-            <div className="space-y-4">
-              <div className="bg-purple-50 text-purple-800 p-4 rounded-md text-sm mb-4">
-                Hubungkan domain milik Anda sendiri (misal: <strong>toko-anda.com</strong> atau <strong>promo.toko-anda.com</strong>) ke Landing Page ini.
-              </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-4">
+                Masukkan domain pribadi Kamu di bawah ini.
+              </p>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Domain</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={domain}
-                    onChange={(e) => setDomain(e.target.value.toLowerCase())}
-                    placeholder="misal: etacefit.id"
-                    className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                  <button
-                    onClick={handleRegister}
-                    disabled={isLoading}
-                    className="bg-purple-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
-                  >
-                    {isLoading ? 'Menyimpan...' : 'Daftarkan'}
-                  </button>
-                </div>
+                <label className="block text-[13px] font-semibold text-gray-700 mb-1">
+                  Domain <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value.toLowerCase())}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#0ea5e9] focus:ring-1 focus:ring-[#0ea5e9] transition-colors"
+                />
               </div>
             </div>
           ) : (
             // Domain Sudah Terdaftar (Pending atau Active)
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800">{cfDomain}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    Status: 
-                    {cfStatus === 'active' ? (
-                      <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                        <CheckCircle2 size={12} /> Aktif
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-xs font-bold text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
-                        <AlertCircle size={12} /> Pending Verifikasi
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={handleCheckStatus}
-                    disabled={isChecking}
-                    className="flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-200"
-                  >
-                    <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} /> Cek Status
-                  </button>
-                  <button 
-                    onClick={handleDelete}
-                    className="flex items-center gap-2 bg-red-50 text-red-600 px-3 py-1.5 rounded text-sm hover:bg-red-100"
-                  >
-                    <Trash2 size={14} /> Hapus
-                  </button>
-                </div>
-              </div>
-
+            <div className="space-y-4">
               {cfStatus !== 'active' && (
-                <div className="border border-yellow-200 bg-yellow-50/50 rounded-md p-4">
-                  <h4 className="font-bold text-gray-800 mb-2">Instruksi Verifikasi DNS</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Tambahkan DNS Record berikut di tempat Anda membeli domain (Hostinger, Niagahoster, dll) agar Cloudflare bisa memverifikasi dan menerbitkan sertifikat SSL.
-                  </p>
-                  
-                  <div className="space-y-4">
-                    {/* CNAME Target */}
-                    <div className="bg-white border border-gray-200 rounded p-3 text-sm">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-gray-500 font-medium">Type: CNAME</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-xs text-gray-400 block mb-1">Name</span>
-                          <div className="flex justify-between bg-gray-50 px-2 py-1.5 rounded border">
-                            <span className="truncate max-w-[200px]">{cfDomain}</span>
-                            <button onClick={() => copyToClipboard(cfDomain)} className="text-gray-400 hover:text-purple-600"><Copy size={14} /></button>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-400 block mb-1">Target</span>
-                          <div className="flex justify-between bg-gray-50 px-2 py-1.5 rounded border">
-                            <span className="truncate max-w-[200px]">pos.ptslu.cloud</span>
-                            <button onClick={() => copyToClipboard('pos.ptslu.cloud')} className="text-gray-400 hover:text-purple-600"><Copy size={14} /></button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ownership TXT */}
-                    {landingPage.cf_ownership_name && (
-                    <div className="bg-white border border-gray-200 rounded p-3 text-sm">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-gray-500 font-medium">Type: TXT</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-xs text-gray-400 block mb-1">Name</span>
-                          <div className="flex justify-between bg-gray-50 px-2 py-1.5 rounded border">
-                            <span className="truncate max-w-[200px]">{landingPage.cf_ownership_name}</span>
-                            <button onClick={() => copyToClipboard(landingPage.cf_ownership_name)} className="text-gray-400 hover:text-purple-600"><Copy size={14} /></button>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-400 block mb-1">Target / Value</span>
-                          <div className="flex justify-between bg-gray-50 px-2 py-1.5 rounded border">
-                            <span className="truncate max-w-[200px]">{landingPage.cf_ownership_value}</span>
-                            <button onClick={() => copyToClipboard(landingPage.cf_ownership_value)} className="text-gray-400 hover:text-purple-600"><Copy size={14} /></button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    )}
-
-                    {/* SSL TXT */}
-                    {landingPage.cf_ssl_name && (
-                    <div className="bg-white border border-gray-200 rounded p-3 text-sm">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-gray-500 font-medium">Type: TXT</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <span className="text-xs text-gray-400 block mb-1">Name</span>
-                          <div className="flex justify-between bg-gray-50 px-2 py-1.5 rounded border">
-                            <span className="truncate max-w-[200px]">{landingPage.cf_ssl_name}</span>
-                            <button onClick={() => copyToClipboard(landingPage.cf_ssl_name)} className="text-gray-400 hover:text-purple-600"><Copy size={14} /></button>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-400 block mb-1">Target / Value</span>
-                          <div className="flex justify-between bg-gray-50 px-2 py-1.5 rounded border">
-                            <span className="truncate max-w-[200px]">{landingPage.cf_ssl_value}</span>
-                            <button onClick={() => copyToClipboard(landingPage.cf_ssl_value)} className="text-gray-400 hover:text-purple-600"><Copy size={14} /></button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    )}
-
+                <>
+                  <div className="bg-[#fff9e6] border border-[#ffecb3] p-4 rounded text-[13px] text-gray-800 flex gap-3">
+                    <Info className="text-yellow-600 shrink-0" size={18} />
+                    <p>Make sure your DNS provider can use CNAME on the apex / root domain, for example Cloudflare.</p>
                   </div>
+                  
+                  {/* CNAME Target */}
+                  <div className="bg-[#f8f9fa] rounded p-4">
+                    <table className="w-full text-left mb-3">
+                      <thead>
+                        <tr>
+                          <th className="text-[13px] font-normal text-gray-500 pb-1 w-1/4">Type</th>
+                          <th className="text-[13px] font-normal text-gray-500 pb-1 w-2/4">Name</th>
+                          <th className="text-[13px] font-normal text-gray-500 pb-1 w-1/4 text-right">TTL</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="text-[13px] font-semibold text-gray-800">CNAME</td>
+                          <td className="text-[13px] font-semibold text-gray-800">@</td>
+                          <td className="text-[13px] font-semibold text-gray-800 text-right">Auto</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div>
+                      <div className="text-[13px] font-normal text-gray-500 mb-1">Target</div>
+                      <div className="text-[13px] font-semibold text-gray-800 break-all flex items-center justify-between group">
+                        pos.ptslu.cloud
+                        <button onClick={() => copyToClipboard('pos.ptslu.cloud')} className="text-gray-400 hover:text-[#0ea5e9] opacity-0 group-hover:opacity-100 transition-opacity"><Copy size={14} /></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SSL TXT */}
+                  {landingPage.cf_ssl_name && (
+                    <div className="bg-[#f8f9fa] rounded p-4">
+                      <table className="w-full text-left mb-3">
+                        <thead>
+                          <tr>
+                            <th className="text-[13px] font-normal text-gray-500 pb-1 w-1/4">Type</th>
+                            <th className="text-[13px] font-normal text-gray-500 pb-1 w-2/4">Name</th>
+                            <th className="text-[13px] font-normal text-gray-500 pb-1 w-1/4 text-right">TTL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="text-[13px] font-semibold text-gray-800">TXT</td>
+                            <td className="text-[13px] font-semibold text-gray-800">{landingPage.cf_ssl_name}</td>
+                            <td className="text-[13px] font-semibold text-gray-800 text-right">Auto</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div>
+                        <div className="text-[13px] font-normal text-gray-500 mb-1">Target</div>
+                        <div className="text-[13px] font-semibold text-gray-800 break-all flex items-center justify-between group">
+                          {landingPage.cf_ssl_value}
+                          <button onClick={() => copyToClipboard(landingPage.cf_ssl_value)} className="text-gray-400 hover:text-[#0ea5e9] opacity-0 group-hover:opacity-100 transition-opacity"><Copy size={14} /></button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ownership TXT */}
+                  {landingPage.cf_ownership_name && (
+                    <div className="bg-[#f8f9fa] rounded p-4">
+                      <table className="w-full text-left mb-3">
+                        <thead>
+                          <tr>
+                            <th className="text-[13px] font-normal text-gray-500 pb-1 w-1/4">Type</th>
+                            <th className="text-[13px] font-normal text-gray-500 pb-1 w-2/4">Name</th>
+                            <th className="text-[13px] font-normal text-gray-500 pb-1 w-1/4 text-right">TTL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="text-[13px] font-semibold text-gray-800">TXT</td>
+                            <td className="text-[13px] font-semibold text-gray-800">{landingPage.cf_ownership_name}</td>
+                            <td className="text-[13px] font-semibold text-gray-800 text-right">Auto</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div>
+                        <div className="text-[13px] font-normal text-gray-500 mb-1">Target</div>
+                        <div className="text-[13px] font-semibold text-gray-800 break-all flex items-center justify-between group">
+                          {landingPage.cf_ownership_value}
+                          <button onClick={() => copyToClipboard(landingPage.cf_ownership_value)} className="text-gray-400 hover:text-[#0ea5e9] opacity-0 group-hover:opacity-100 transition-opacity"><Copy size={14} /></button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-4 pb-2">
+                    <button 
+                      onClick={handleCheckStatus}
+                      disabled={isChecking}
+                      className="bg-[#0ea5e9] hover:bg-[#0284c7] text-white px-5 py-2.5 rounded text-[13px] font-medium transition-colors flex items-center gap-2"
+                    >
+                      {isChecking ? <RefreshCw size={16} className="animate-spin" /> : null}
+                      Verifikasi
+                    </button>
+                  </div>
+                </>
+              )}
+              
+              {cfStatus === 'active' && (
+                <div className="py-8 flex flex-col items-center justify-center text-center">
+                  <CheckCircle2 size={48} className="text-emerald-500 mb-4" />
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Domain Terverifikasi</h3>
+                  <p className="text-sm text-gray-500">Domain {cfDomain} sudah terhubung dengan aman.</p>
                 </div>
               )}
             </div>
           )}
         </div>
+
+        {/* Footer */}
+        {!hostnameId ? (
+          <div className="px-6 pb-6 pt-2 flex justify-end gap-3">
+            <button 
+              onClick={onClose} 
+              className="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleRegister} 
+              disabled={isLoading} 
+              className="px-4 py-2 text-[13px] font-medium text-white bg-[#0ea5e9] hover:bg-[#0284c7] rounded transition-colors disabled:opacity-50"
+            >
+              {isLoading ? 'Menyimpan...' : 'Save'}
+            </button>
+          </div>
+        ) : (
+          <div className="px-6 py-4 flex justify-between items-center bg-white border-t border-gray-100">
+            <button 
+              onClick={handleDelete}
+              className="text-[#ef4444] hover:text-red-700 text-[13px] font-medium transition-colors"
+            >
+              Hapus Domain
+            </button>
+            <button 
+              onClick={onClose} 
+              className="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
