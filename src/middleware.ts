@@ -40,15 +40,38 @@ export async function middleware(req: NextRequest) {
 
   let isSubdomain = false;
   let subdomain = '';
+  
+  // 1. Check Custom Domain First
+  let matchedSlug = '';
+  try {
+    const baseUrl = `${url.protocol}//${hostname}`;
+    const lpRes = await fetch(`${baseUrl}/api/landing-pages`, { 
+      next: { revalidate: 60 } 
+    });
+    if (lpRes.ok) {
+      const json = await lpRes.json();
+      const pages = json.data || [];
+      const matchedPage = pages.find((p: any) => p.domain === currentHost && p.domain_status === 'active');
+      if (matchedPage) {
+        matchedSlug = matchedPage.slug;
+      }
+    }
+  } catch (error) {
+    console.error('Middleware LP fetch error:', error);
+  }
 
-  // 1. If base domain is set and matches the host
+  if (matchedSlug) {
+    return NextResponse.rewrite(new URL(`/lp/${matchedSlug}${path === '/' ? '' : path}`, req.url));
+  }
+
+  // 2. If base domain is set and matches the host
   if (baseDomainWithoutPort && currentHost !== baseDomainWithoutPort) {
     if (currentHost.endsWith(`.${baseDomainWithoutPort}`)) {
       isSubdomain = true;
       subdomain = currentHost.replace(`.${baseDomainWithoutPort}`, '');
     }
   } else if (!baseDomainWithoutPort) {
-    // 2. Fallback for localhost testing with lvh.me
+    // 3. Fallback for localhost testing with lvh.me
     if (currentHost.endsWith('.lvh.me')) {
       isSubdomain = true;
       subdomain = currentHost.replace('.lvh.me', '');

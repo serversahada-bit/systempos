@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Filter, MoreHorizontal, CheckCircle2, Plus, ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { Search, Filter, MoreHorizontal, CheckCircle2, Plus, ExternalLink, Pencil, Trash2, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Settings } from 'lucide-react';
+import CustomDomainModal from '@/components/CustomDomainModal';
 
 export default function LandingPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -16,6 +17,10 @@ export default function LandingPage() {
   const [showDomainModal, setShowDomainModal] = useState(false);
   const [baseDomain, setBaseDomain] = useState('');
   const [isSavingDomain, setIsSavingDomain] = useState(false);
+  
+  // Custom Domain Modal
+  const [showCustomDomainModal, setShowCustomDomainModal] = useState(false);
+  const [selectedLp, setSelectedLp] = useState<any>(null);
 
   const router = useRouter();
 
@@ -35,7 +40,12 @@ export default function LandingPage() {
             domain: item.domain || null,
             domain_status: item.domain_status || 'inactive',
             status: item.status,
-            id: item.id
+            id: item.id,
+            cf_hostname_id: item.cf_hostname_id,
+            cf_ownership_name: item.cf_ownership_name,
+            cf_ownership_value: item.cf_ownership_value,
+            cf_ssl_name: item.cf_ssl_name,
+            cf_ssl_value: item.cf_ssl_value
           }));
           setDbData(formatted);
         }
@@ -281,6 +291,16 @@ export default function LandingPage() {
                           >
                             <Pencil size={14} /> Edit
                           </Link>
+                          <button 
+                            onClick={() => {
+                              setSelectedLp(row);
+                              setShowCustomDomainModal(true);
+                              setOpenMenuId(null);
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 hover:text-purple-600 w-full text-left"
+                          >
+                            <Globe size={14} /> Domain Pribadi
+                          </button>
                           <a 
                             href={row.slug} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 hover:text-purple-600 w-full text-left"
@@ -339,6 +359,14 @@ export default function LandingPage() {
           </div>
         </div>
       )}
+
+      {/* Custom Domain Modal */}
+      <CustomDomainModal 
+        isOpen={showCustomDomainModal} 
+        onClose={() => setShowCustomDomainModal(false)} 
+        landingPage={selectedLp}
+        onSuccess={fetchData}
+      />
     </div>
   );
 }
