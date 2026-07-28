@@ -202,13 +202,17 @@ export default function LandingPage() {
               </tr>
             </thead>
             <tbody className="text-sm">
-              {data.map((row, index) => (
+              {data.map((row, index) => {
+                const fullDomain = baseDomain && row.rawSlug ? `${row.rawSlug}.${baseDomain}` : row.domain;
+                const linkHref = fullDomain ? `https://${fullDomain}` : row.slug;
+                
+                return (
                 <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-start gap-2">
 
                       <div>
-                        <a href={row.slug} target="_blank" rel="noopener noreferrer" className="font-semibold text-purple-600 hover:underline inline-block mb-1">
+                        <a href={linkHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-purple-600 hover:underline inline-block mb-1">
                           {row.name}
                         </a>
                         {row.shop && (
@@ -218,8 +222,8 @@ export default function LandingPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 align-top">
-                    <a href={row.slug} target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
-                      {row.slug}
+                    <a href={linkHref} target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
+                      {linkHref}
                     </a>
                   </td>
                   <td className="px-6 py-4 align-top">
@@ -237,9 +241,7 @@ export default function LandingPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 align-top">
-                    {(() => {
-                      const fullDomain = baseDomain && row.rawSlug ? `${row.rawSlug}.${baseDomain}` : row.domain;
-                      return fullDomain ? (
+                    {fullDomain ? (
                       <div className="flex items-center gap-2">
                         <span className="text-gray-700 text-xs font-medium">{fullDomain}</span>
                         {row.domain_status === 'active' ? (
@@ -254,8 +256,7 @@ export default function LandingPage() {
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400 italic">Belum diatur</span>
-                    );
-                    })()}
+                    )}
                   </td>
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-center gap-4 relative">
@@ -297,7 +298,7 @@ export default function LandingPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
