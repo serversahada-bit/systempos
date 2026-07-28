@@ -26,6 +26,10 @@ function generateId() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+function sanitizeSlug(value: string) {
+  return value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
 // ─── Default content per block type ─────────────────────────────────────────
 function defaultBlock(type: BlockType): Block {
   const id = generateId();
@@ -487,7 +491,15 @@ ${blocks.map(b => {
                 value={title}
                 onChange={e => setTitle(e.target.value)}
               />
-              <span className="text-[10px] text-purple-200">/lp/{slug}</span>
+              <div className="flex items-center gap-1 border-b border-white/20 pb-0.5">
+                <span className="text-[10px] text-purple-200 select-none">/lp/</span>
+                <input
+                  className="bg-transparent text-[10px] text-white/90 outline-none w-40"
+                  value={slug}
+                  placeholder="nama-produk-anda"
+                  onChange={e => setSlug(sanitizeSlug(e.target.value))}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -651,7 +663,7 @@ ${blocks.map(b => {
                     className="flex-1 bg-transparent text-sm text-gray-800 font-medium focus:outline-none"
                     value={slug}
                     placeholder="nama-produk-anda"
-                    onChange={e => setSlug(e.target.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))}
+                    onChange={e => setSlug(sanitizeSlug(e.target.value))}
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-2">URL ini akan digunakan sebagai link utama landing page Anda.</p>
