@@ -155,7 +155,7 @@ export default function CustomDomainModal({ isOpen, onClose, landingPage, onSucc
                 <>
                   <div className="bg-[#fff9e6] border border-[#ffecb3] p-4 rounded text-[13px] text-gray-800 flex gap-3">
                     <Info className="text-yellow-600 shrink-0" size={18} />
-                    <p>Make sure your DNS provider can use CNAME on the apex / root domain, for example Cloudflare.</p>
+                    <p><strong>Langkah Terakhir:</strong> Buka pengaturan DNS di tempat Anda membeli domain (misal: Hostinger, Niagahoster), lalu tambahkan data CNAME/TXT di bawah ini.</p>
                   </div>
                   
                   {/* CNAME Target */}
