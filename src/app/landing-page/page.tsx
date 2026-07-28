@@ -237,9 +237,11 @@ export default function LandingPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 align-top">
-                    {row.domain ? (
+                    {(() => {
+                      const fullDomain = baseDomain && row.rawSlug ? `${row.rawSlug}.${baseDomain}` : row.domain;
+                      return fullDomain ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-700 text-xs font-medium">{row.domain}</span>
+                        <span className="text-gray-700 text-xs font-medium">{fullDomain}</span>
                         {row.domain_status === 'active' ? (
                           <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
                             <CheckCircle2 size={10} /> Aktif
@@ -252,7 +254,8 @@ export default function LandingPage() {
                       </div>
                     ) : (
                       <span className="text-xs text-gray-400 italic">Belum diatur</span>
-                    )}
+                    );
+                    })()}
                   </td>
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-center gap-4 relative">
