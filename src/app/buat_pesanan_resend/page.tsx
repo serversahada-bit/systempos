@@ -1133,32 +1133,39 @@ export default function BuatPesananPage() {
                         if (!added) {
                           let totalQty = 0;
                           let totalNormalPrice = 0;
-                          let totalWeight = 0;
                           
                           (b.product_bundle_items || []).forEach((item: any) => {
                             const q = Number(item.qty || 1);
                             totalQty += q;
                             totalNormalPrice += Number(item.products?.price || 0) * q;
-                            totalWeight += Number(item.products?.weight_gram || 0) * q;
                           });
 
                           const bundlePrice = Number(b.price || 0);
-                          const unitPrice = totalQty > 0 ? Math.round(totalNormalPrice / totalQty) : 0;
                           const totalDiscount = totalNormalPrice > bundlePrice ? totalNormalPrice - bundlePrice : 0;
                           const discountPerItem = totalQty > 0 ? Math.round(totalDiscount / totalQty) : 0;
 
-                          setCart([...cart, {
-                            product_id: b.id,
-                            product_name: b.bundle_name,
-                            price: unitPrice,
-                            qty: totalQty || 1,
-                            discount: discountPerItem,
-                            weight_gram: totalQty > 0 ? Math.round(totalWeight / totalQty) : 0, 
-                            is_gift: false,
-                            is_bundle: true,
-                            bundle_items: [],
-                            image_url: b.image_url,
-                          }]);
+                          setCart(prev => {
+                            const nextItems = [...prev];
+                            (b.product_bundle_items || []).forEach((item: any) => {
+                              const existingIndex = nextItems.findIndex((c) => c.product_id === Number(item.product_id) && !c.is_gift && !c.is_bundle);
+                              if (existingIndex >= 0) {
+                                nextItems[existingIndex].qty = Number(nextItems[existingIndex].qty) + Number(item.qty || 1);
+                              } else {
+                                nextItems.push({
+                                  product_id: Number(item.product_id),
+                                  product_name: item.products?.product_name || 'Produk Bundling',
+                                  price: Number(item.products?.price || 0),
+                                  qty: Number(item.qty || 1),
+                                  discount: discountPerItem,
+                                  weight_gram: Number(item.products?.weight_gram || 0),
+                                  is_gift: false,
+                                  is_bundle: false,
+                                  image_url: item.products?.image_url || '',
+                                });
+                              }
+                            });
+                            return nextItems;
+                          });
                           setShowBundlingModal(false);
                         }
                       }}>
