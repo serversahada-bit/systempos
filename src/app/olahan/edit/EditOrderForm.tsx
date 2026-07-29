@@ -271,7 +271,7 @@ export default function EditOrderForm() {
 
   useEffect(() => {
     void fetchShippingOptions();
-  }, [data, form.subdistrict, items]);
+  }, [data, form.subdistrict, items.length, items]);
 
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 

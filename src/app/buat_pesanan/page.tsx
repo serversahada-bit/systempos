@@ -378,7 +378,7 @@ export default function BuatPesananPage() {
     if (subdistrict && cart.length > 0) {
       fetchShippingRates();
     }
-  }, [subdistrict, totals.totalWeight]);
+  }, [subdistrict, totals.totalWeight, cart.length]);
 
   useEffect(() => {
     const selectedCourierOpt = availableCouriers.find(c => c.warehouseId === warehouseId && c.courierName === courierName);
