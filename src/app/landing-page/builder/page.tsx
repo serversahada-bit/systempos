@@ -755,10 +755,10 @@ export default function BuilderPage() {
         <div className="flex items-center gap-3 sm:gap-5">
           <div className="hidden gap-0.5 rounded bg-white/20 p-0.5 sm:flex">
             {[
-              ['desktop', <Monitor size={14} key="desktop-icon" />],
-              ['tablet', <Tablet size={14} key="tablet-icon" />],
-              ['mobile', <Smartphone size={14} key="mobile-icon" />],
-            ].map(([name, icon]) => (
+              { name: 'desktop', icon: <Monitor size={14} key="desktop-icon" /> },
+              { name: 'tablet', icon: <Tablet size={14} key="tablet-icon" /> },
+              { name: 'mobile', icon: <Smartphone size={14} key="mobile-icon" /> },
+            ].map(({ name, icon }) => (
               <button
                 key={name}
                 onClick={() => setDevice(name as 'desktop' | 'tablet' | 'mobile')}
