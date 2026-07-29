@@ -760,7 +760,7 @@ export default function BuilderPage() {
               ['mobile', <Smartphone size={14} key="mobile-icon" />],
             ].map(([name, icon]) => (
               <button
-                key={name}
+                key={name as string}
                 onClick={() => setDevice(name as 'desktop' | 'tablet' | 'mobile')}
                 className={`rounded p-1.5 transition-colors ${
                   device === name ? 'bg-white text-[#7e22ce]' : 'hover:bg-white/10'
