@@ -62,7 +62,7 @@ export async function GET(request: Request) {
     const statusLogOrderMarker = `Order: ${resolved.order_code}`;
     const statusLogSourceMarker = `Source: ${source}`;
 
-    const [orders, items, payments, shipments, products, gifts, bundles, warehouses, couriers, promos, advertisers, adSources, paymentAccounts, noPaymentMethods, productStocks, giftStocks, editLogs] = await Promise.all([
+    const [orders, items, payments, shipments, products, gifts, bundles, warehouses, couriers, promos, advertisers, adSources, paymentAccounts, noPaymentMethods, productStocks, giftStocks, editLogs, bundleItems] = await Promise.all([
       prisma.$queryRawUnsafe<any[]>(`SELECT o.*, c.name customer_name, c.whatsapp_number, c.email, c.address, c.province, c.city, c.subdistrict, c.desa, c.age, c.complaint FROM ${t.orders} o LEFT JOIN customers c ON c.id=o.customer_id WHERE o.id=? LIMIT 1`, orderId),
       prisma.$queryRawUnsafe<any[]>(`SELECT oi.*, COALESCE(pb.image_url,p.image_url,g.image_url) image_url FROM ${t.items} oi LEFT JOIN products p ON p.id=oi.product_id AND COALESCE(oi.is_gift,0)=0 AND COALESCE(oi.is_bundle,0)=0 LEFT JOIN gifts g ON g.id=oi.product_id AND oi.is_gift=1 LEFT JOIN product_bundles pb ON pb.id=oi.product_id AND oi.is_bundle=1 WHERE oi.order_id=?`, orderId),
       prisma.$queryRawUnsafe<any[]>(`SELECT * FROM ${t.payments} WHERE order_id=? LIMIT 1`, orderId),
@@ -122,12 +122,22 @@ export async function GET(request: Request) {
         },
         take: 10,
       }),
+      prisma.$queryRawUnsafe<any[]>(`SELECT pbi.bundle_id, pbi.product_id, pbi.qty, p.product_name, p.image_url FROM product_bundle_items pbi LEFT JOIN products p ON p.id = pbi.product_id`),
     ]);
 
     const order = orders[0];
     if (!order) return NextResponse.json({ status: 'error', message: 'Pesanan tidak ditemukan' }, { status: 404 });
     if (!order.warehouse_id && shipments[0]?.warehouse_id) order.warehouse_id = shipments[0].warehouse_id;
     if (!order.courier_id && shipments[0]?.courier_name) order.courier_name = shipments[0].courier_name;
+
+    bundles.forEach((b: any) => {
+      b.components = bundleItems.filter((i: any) => i.bundle_id === b.id).map((i: any) => ({
+        product_id: i.product_id,
+        qty: i.qty,
+        product_name: i.product_name,
+        image_url: i.image_url
+      }));
+    });
 
     const normalizedNoPaymentMethods = noPaymentMethods.map((item: any) => ({
       ...item,

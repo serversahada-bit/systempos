@@ -293,6 +293,43 @@ export default function EditOrderForm() {
     const isGift = kind === 'gift';
     const isBundle = kind === 'bundle';
 
+    if (isBundle) {
+      let components: any[] = [];
+      try {
+        components = typeof found.components === 'string' ? JSON.parse(found.components) : (found.components || []);
+      } catch (e) {
+        components = [];
+      }
+
+      if (components && components.length > 0) {
+        const totalQty = components.reduce((sum: number, c: any) => sum + Number(c.qty), 0);
+        const unitPrice = totalQty > 0 ? Math.round(Number(found.price) / totalQty) : 0;
+
+        setItems((prev) => {
+          const nextItems = [...prev];
+          components.forEach((c: any) => {
+            const existingIndex = nextItems.findIndex((item) => item.product_id === Number(c.product_id) && !item.is_gift && !item.is_bundle);
+            if (existingIndex >= 0) {
+              nextItems[existingIndex].qty += Number(c.qty);
+            } else {
+              nextItems.push({
+                product_id: Number(c.product_id),
+                product_name: c.product_name || 'Produk Bundling',
+                qty: Number(c.qty),
+                price: unitPrice,
+                discount: 0,
+                is_gift: false,
+                is_bundle: false,
+                image_url: c.image_url,
+              });
+            }
+          });
+          return nextItems;
+        });
+        return;
+      }
+    }
+
     if (items.some((item) => item.product_id === number(found.id) && item.is_gift === isGift && item.is_bundle === isBundle)) {
       void Swal.fire('Info', 'Item sudah ada dalam pesanan', 'info');
       return;
