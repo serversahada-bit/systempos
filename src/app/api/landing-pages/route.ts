@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
@@ -41,10 +39,11 @@ export async function POST(req: Request) {
       { message: 'Landing page berhasil disimpan', data: landingPage },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const details = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error saving landing page:', error);
     return NextResponse.json(
-      { error: 'Gagal menyimpan landing page', details: error.message },
+      { error: 'Gagal menyimpan landing page', details },
       { status: 500 }
     );
   }
@@ -56,7 +55,7 @@ export async function GET() {
       orderBy: { updated_at: 'desc' }
     });
     return NextResponse.json({ data: landingPages }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching landing pages:', error);
     return NextResponse.json(
       { error: 'Gagal mengambil data landing page' },
@@ -64,4 +63,3 @@ export async function GET() {
     );
   }
 }
-
