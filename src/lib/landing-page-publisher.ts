@@ -220,7 +220,7 @@ async function deployWithSftp({
         { windowsHide: true, timeout: 30000 }
       );
 
-      const sftpArgs = ['-p', port, '-o', 'StrictHostKeyChecking=no'];
+      const sftpArgs = ['-P', port, '-o', 'StrictHostKeyChecking=no'];
       sftpArgs.push('-b', sftpBatchFile);
       sftpArgs.push(`${username}@${host}`);
 
