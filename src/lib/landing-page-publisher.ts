@@ -190,7 +190,7 @@ async function deployWithSftp({
   const tempDir = path.join(process.cwd(), '.tmp', 'lp-publish');
   await mkdir(tempDir, { recursive: true });
 
-  const sshArgs = ['-p', port, '-o', 'StrictHostKeyChecking=no'];
+  const sshArgs = ['-p', port, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'];
   if (useKeyAuth && sshKeyPath) {
     sshArgs.push('-i', sshKeyPath);
   }
@@ -220,7 +220,7 @@ async function deployWithSftp({
         { windowsHide: true, timeout: 30000 }
       );
 
-      const sftpArgs = ['-P', port, '-o', 'StrictHostKeyChecking=no'];
+      const sftpArgs = ['-P', port, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'];
       sftpArgs.push('-b', sftpBatchFile);
       sftpArgs.push(`${username}@${host}`);
 
@@ -232,7 +232,7 @@ async function deployWithSftp({
     } else {
       await execFileAsync(sshCommand, sshArgs, { windowsHide: true, timeout: 30000 });
 
-      const sftpArgs = ['-P', port, '-o', 'StrictHostKeyChecking=no'];
+      const sftpArgs = ['-P', port, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'];
       if (useKeyAuth && sshKeyPath) {
         sftpArgs.push('-i', sshKeyPath);
       }
