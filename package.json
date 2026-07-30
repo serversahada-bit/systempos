@@ -2,6 +2,9 @@
   "name": "pos-app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently \"node server-ws.js\" \"next dev\"",
     "build": "next build",
