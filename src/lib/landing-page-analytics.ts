@@ -53,10 +53,9 @@ export function parseLandingPageAnalytics(raw: string | null | undefined): Landi
       return [];
     }
 
-    return parsed
-      .map((item) => {
+    return parsed.reduce<LandingPageAnalyticsConfig[]>((acc, item) => {
         if (!item || typeof item !== 'object') {
-          return null;
+          return acc;
         }
 
         const source = item as Record<string, unknown>;
@@ -71,10 +70,10 @@ export function parseLandingPageAnalytics(raw: string | null | undefined): Landi
           : [];
 
         if (!type || !pixelId || !name) {
-          return null;
+          return acc;
         }
 
-        return {
+        acc.push({
           id,
           type,
           name,
@@ -83,9 +82,10 @@ export function parseLandingPageAnalytics(raw: string | null | undefined): Landi
             typeof source.conversionApiAccessToken === 'string' ? source.conversionApiAccessToken.trim() : '',
           testCode: typeof source.testCode === 'string' ? source.testCode.trim() : '',
           openEvents: openEvents.length > 0 ? openEvents : ['ViewContent'],
-        } satisfies LandingPageAnalyticsConfig;
-      })
-      .filter((item): item is LandingPageAnalyticsConfig => Boolean(item));
+        });
+
+        return acc;
+      }, []);
   } catch {
     return [];
   }
