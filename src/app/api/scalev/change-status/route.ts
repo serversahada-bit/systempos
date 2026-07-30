@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { changeScalevOrderStatus, getScalevBaseUrl, getScalevOrderStatus } from '@/lib/scalev';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,41 +28,62 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = scalevSetting.api_key;
-    const baseUrl = scalevSetting.url || 'https://api.scalev.id/v3';
+    const baseUrl = getScalevBaseUrl(scalevSetting.url);
     
-    // Sesuaikan payload sesuai dengan dokumentasi Scalev API: https://dev.scalev.com/reference/changeorderstatus
-    const payload = {
-      ids: order_ids,
-      status: status
-    };
-
-    const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/orders/change-status`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload)
+    const result = await changeScalevOrderStatus({
+      apiKey,
+      baseUrl,
+      orderIds: order_ids,
+      status,
     });
 
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
+    if (!result.ok) {
       return NextResponse.json({ 
         success: false, 
-        message: data.message || `Gagal mengubah status di Scalev (HTTP ${response.status})`,
-        details: data
-      }, { status: response.status });
+        message: result.message,
+        details: result.data
+      }, { status: result.statusCode });
+    }
+
+    const verification = await Promise.all(
+      order_ids.map(async (orderId: string) => {
+        const statusResult = await getScalevOrderStatus({
+          apiKey,
+          baseUrl,
+          orderId,
+        });
+
+        return {
+          order_id: orderId,
+          verified: statusResult.ok && statusResult.orderStatus === status,
+          actual_status: statusResult.orderStatus,
+          verification_message: statusResult.message,
+          verification_details: statusResult.data,
+        };
+      })
+    );
+
+    const mismatchedOrders = verification.filter((item) => !item.verified);
+
+    if (mismatchedOrders.length > 0) {
+      return NextResponse.json({
+        success: false,
+        message: `Scalev merespons OK, tetapi ${mismatchedOrders.length} order belum benar-benar berubah ke status ${status}.`,
+        data: result.data,
+        verification,
+      }, { status: 409 });
     }
 
     return NextResponse.json({ 
       success: true, 
       message: 'Status pesanan berhasil diubah di Scalev.',
-      data: data
+      data: result.data,
+      verification,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[API /scalev/change-status POST]', error);
-    return NextResponse.json({ success: false, message: 'Internal Server Error: ' + error.message }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Internal Server Error: ' + message }, { status: 500 });
   }
 }

@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { changeScalevOrderStatus, getScalevBaseUrl } from '@/lib/scalev';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // 1. Ambil antrean dari database
     const queues = await prisma.scalev_sync_queue.findMany({
@@ -43,35 +44,23 @@ export async function GET(request: NextRequest) {
     for (const status in idsByStatus) {
       const ids = idsByStatus[status];
       
-      const payload = {
-        ids: ids,
-        status: status
-      };
-
-      // Menggunakan endpoint v3 sesuai permintaan pengguna (https://dev.scalev.com/reference/changeorderstatus)
-      const baseUrl = scalevSetting.url || 'https://api.scalev.id/v3';
-      const url = `${baseUrl.replace(/\/+$/, '')}/orders/change-status`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(payload)
+      const baseUrl = getScalevBaseUrl(scalevSetting.url);
+      const result = await changeScalevOrderStatus({
+        apiKey,
+        baseUrl,
+        orderIds: ids,
+        status,
       });
-
-      const responseData = await response.json().catch(() => ({}));
 
       results.push({
         status: status,
         ids: ids,
-        api_status: response.status,
-        api_response: responseData
+        api_status: result.statusCode,
+        api_response: result.data,
+        message: result.message,
       });
 
-      // Anggap sukses kalau HTTP 200 (walaupun Scalev mungkin me-return data kosong)
-      if (response.ok) {
+      if (result.ok) {
         successfulIds.push(...ids);
       }
     }
@@ -92,8 +81,9 @@ export async function GET(request: NextRequest) {
       details: results 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('[API /cron/sync-status]', error);
-    return NextResponse.json({ success: false, message: 'Internal Server Error: ' + error.message }, { status: 500 });
+    return NextResponse.json({ success: false, message: 'Internal Server Error: ' + message }, { status: 500 });
   }
 }

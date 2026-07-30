@@ -12,7 +12,7 @@
   --sidebar-width: 272px;
   --shadow-soft: 0 18px 45px rgba(76, 29, 149, 0.08);
   --shadow-card: 0 10px 30px rgba(76, 29, 149, 0.06);
-  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-sans: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 * {

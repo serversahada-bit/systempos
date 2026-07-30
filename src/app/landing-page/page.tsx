@@ -49,6 +49,7 @@ export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Published' | 'Draft'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const router = useRouter();
 
@@ -158,6 +159,58 @@ export default function LandingPage() {
     }
   };
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredData.map((row) => row.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkAction = async (action: 'publish' | 'draft' | 'delete') => {
+    const actionText = action === 'publish' ? 'Publish' : action === 'draft' ? 'Jadikan Draft' : 'Hapus';
+    
+    const result = await Swal.fire({
+      title: `Bulk ${actionText}?`,
+      text: `Anda yakin ingin ${actionText.toLowerCase()} ${selectedIds.length} item?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: action === 'delete' ? '#dc2626' : '#0284c7',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Ya, ${actionText}!`,
+      cancelButtonText: 'Batal',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const res = await fetch('/api/landing-pages/bulk', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ids: selectedIds, action }),
+        });
+        
+        if (res.ok) {
+          Swal.fire('Berhasil!', `Bulk action ${actionText} berhasil.`, 'success');
+          setSelectedIds([]);
+          fetchData();
+        } else {
+          const data = await res.json();
+          Swal.fire('Error', data.error || 'Terjadi kesalahan', 'error');
+        }
+      } catch (err) {
+        Swal.fire('Error', 'Gagal memproses permintaan', 'error');
+      }
+    }
+  };
+
   const filteredData = useMemo(() => {
     return dbData.filter((row) => {
       const query = searchQuery.trim().toLowerCase();
@@ -240,6 +293,31 @@ export default function LandingPage() {
                     </div>
                   )}
                 </div>
+
+                {selectedIds.length > 0 && (
+                  <div className="flex items-center gap-2 border-l pl-4 border-slate-200">
+                    <span className="text-sm font-medium text-slate-500 mr-1">{selectedIds.length} dipilih</span>
+                    <button
+                      onClick={() => handleBulkAction('publish')}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50 hover:border-emerald-200"
+                    >
+                      Publish
+                    </button>
+                    <button
+                      onClick={() => handleBulkAction('draft')}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-amber-600 transition hover:bg-amber-50 hover:border-amber-200"
+                    >
+                      Draft
+                    </button>
+                    <button
+                      onClick={() => handleBulkAction('delete')}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 hover:border-rose-300"
+                    >
+                      <Trash2 size={15} />
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -289,6 +367,14 @@ export default function LandingPage() {
                 <table className="w-full min-w-[1024px] border-collapse text-left">
                   <thead className="bg-slate-50">
                     <tr className="border-b border-slate-200">
+                      <th className="w-12 px-6 py-4">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-fuchsia-600 focus:ring-fuchsia-500 cursor-pointer"
+                          checked={filteredData.length > 0 && selectedIds.length === filteredData.length}
+                          onChange={handleSelectAll}
+                        />
+                      </th>
                       <th className="px-6 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Nama Landing Page</th>
                       <th className="px-6 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Slug / URL</th>
                       <th className="px-6 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Mode</th>
@@ -302,14 +388,14 @@ export default function LandingPage() {
                     {isLoading ? (
                       Array.from({ length: 4 }).map((_, index) => (
                         <tr key={index} className="border-b border-slate-100">
-                          <td className="px-6 py-5" colSpan={7}>
+                          <td className="px-6 py-5" colSpan={8}>
                             <div className="h-12 animate-pulse rounded-2xl bg-slate-100" />
                           </td>
                         </tr>
                       ))
                     ) : filteredData.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-16 text-center">
+                        <td colSpan={8} className="px-6 py-16 text-center">
                           <div className="mx-auto max-w-md">
                             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                               <Search size={22} />
@@ -328,6 +414,14 @@ export default function LandingPage() {
 
                         return (
                           <tr key={row.id} className="border-b border-slate-100 transition hover:bg-slate-50/80">
+                            <td className="px-6 py-5 align-top">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-slate-300 text-fuchsia-600 focus:ring-fuchsia-500 mt-1 cursor-pointer"
+                                checked={selectedIds.includes(row.id)}
+                                onChange={() => handleSelectRow(row.id)}
+                              />
+                            </td>
                             <td className="px-6 py-5 align-top">
                               <div className="max-w-[260px]">
                                 <div className="flex items-center gap-2">
