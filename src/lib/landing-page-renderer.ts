@@ -10,7 +10,12 @@ export type BlockType =
   | 'hero'
   | 'video'
   | 'faq'
-  | 'footer';
+  | 'footer'
+  | 'gallery'
+  | 'form'
+  | 'stats'
+  | 'countdown'
+  | 'spacer';
 
 export interface Block {
   id: string;
@@ -123,6 +128,85 @@ export function renderBlocksToHtml(blocks: Block[]) {
             <div style="opacity:0.8">${nl2br(block.content.contactInfo || '')}</div>
             <div style="margin-top:16px;opacity:0.6">&copy; ${new Date().getFullYear()} Hak Cipta Dilindungi.</div>
           </div>`;
+        case 'gallery': {
+          const images = ['image1', 'image2', 'image3', 'image4']
+            .map((key, index) => {
+              const src = block.content[key] || '';
+              const alt = block.content[`alt${index + 1}`] || `Gallery ${index + 1}`;
+
+              if (!src) {
+                return `<div style="aspect-ratio:1/1;border:1px dashed #d8b4fe;border-radius:${s.borderRadius || '16px'};background:#faf5ff"></div>`;
+              }
+
+              return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:${s.borderRadius || '16px'}" />`;
+            })
+            .join('');
+
+          return `<div style="padding:${s.padding};margin:${s.margin}">
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:${s.gap || '12px'}">
+              ${images}
+            </div>
+          </div>`;
+        }
+        case 'form': {
+          const formIdentifier = `lp-form-${block.id}`;
+          const successMessage = block.content.successMessage || 'Terima kasih, data Anda sudah kami terima.';
+
+          return `<div style="padding:${s.padding};margin:${s.margin};background-color:${s.backgroundColor};border-radius:${s.borderRadius};color:${s.color}">
+            ${block.content.title ? `<div style="font-size:24px;font-weight:800;line-height:1.2;margin-bottom:8px">${nl2br(block.content.title)}</div>` : ''}
+            ${block.content.subtitle ? `<div style="font-size:14px;line-height:1.7;opacity:0.82;margin-bottom:18px">${nl2br(block.content.subtitle)}</div>` : ''}
+            <?php if (($lpRequestMethod ?? 'GET') === 'POST' && (($_POST['lp_form_id'] ?? '') === '${escapeHtml(formIdentifier)}')): ?>
+            <div style="margin-bottom:16px;padding:12px 14px;border-radius:14px;background:#dcfce7;color:#166534;font-size:13px;line-height:1.6">${nl2br(successMessage)}</div>
+            <?php endif; ?>
+            <form method="${escapeHtml(block.content.method || 'post')}" action="${escapeHtml(block.content.action || '')}" style="display:grid;gap:${s.gap || '12px'}">
+              <input type="hidden" name="lp_form_id" value="${escapeHtml(formIdentifier)}" />
+              <input type="text" name="full_name" placeholder="${escapeHtml(block.content.namePlaceholder || 'Nama lengkap')}" style="width:100%;padding:14px 16px;border-radius:14px;border:1px solid #d1d5db;background:#fff;color:#111827;box-sizing:border-box" />
+              <input type="tel" name="phone" placeholder="${escapeHtml(block.content.phonePlaceholder || 'No. WhatsApp')}" style="width:100%;padding:14px 16px;border-radius:14px;border:1px solid #d1d5db;background:#fff;color:#111827;box-sizing:border-box" />
+              <input type="email" name="email" placeholder="${escapeHtml(block.content.emailPlaceholder || 'Email')}" style="width:100%;padding:14px 16px;border-radius:14px;border:1px solid #d1d5db;background:#fff;color:#111827;box-sizing:border-box" />
+              <textarea name="message" placeholder="${escapeHtml(block.content.messagePlaceholder || 'Tulis kebutuhan Anda')}" rows="4" style="width:100%;padding:14px 16px;border-radius:14px;border:1px solid #d1d5db;background:#fff;color:#111827;box-sizing:border-box;resize:vertical"></textarea>
+              <button type="submit" style="border:none;background:${s.buttonBackgroundColor || '#7c3aed'};color:${s.buttonTextColor || '#ffffff'};padding:14px 18px;border-radius:${s.buttonBorderRadius || '999px'};font-size:15px;font-weight:700;cursor:pointer">
+                ${escapeHtml(block.content.buttonText || 'Kirim Sekarang')}
+              </button>
+            </form>
+          </div>`;
+        }
+        case 'stats': {
+          const items = [
+            { value: block.content.value1 || '1K+', label: block.content.label1 || 'Pelanggan' },
+            { value: block.content.value2 || '4.9/5', label: block.content.label2 || 'Rating' },
+            { value: block.content.value3 || '24/7', label: block.content.label3 || 'Support' },
+          ];
+
+          return `<div style="padding:${s.padding};margin:${s.margin};background-color:${s.backgroundColor};border-radius:${s.borderRadius};color:${s.color}">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:${s.gap || '12px'}">
+              ${items
+                .map(
+                  (item) => `<div style="text-align:center">
+                    <div style="font-size:${s.fontSize || '26px'};font-weight:900;line-height:1">${nl2br(item.value)}</div>
+                    <div style="margin-top:6px;font-size:12px;opacity:.78;line-height:1.6">${nl2br(item.label)}</div>
+                  </div>`
+                )
+                .join('')}
+            </div>
+          </div>`;
+        }
+        case 'countdown':
+          return `<div style="padding:${s.padding};margin:${s.margin};background-color:${s.backgroundColor};border-radius:${s.borderRadius};color:${s.color};text-align:${s.textAlign}">
+            <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.72;margin-bottom:12px">${nl2br(
+              block.content.label || 'Promo berakhir dalam'
+            )}</div>
+            <div class="lp-countdown-grid" data-countdown-end="${escapeHtml(block.content.endDate || '')}" data-countdown-expired="${escapeHtml(
+              block.content.expiredText || 'Promo sudah berakhir'
+            )}">
+              <div class="lp-countdown-item"><strong data-unit="days">00</strong><span>Hari</span></div>
+              <div class="lp-countdown-item"><strong data-unit="hours">00</strong><span>Jam</span></div>
+              <div class="lp-countdown-item"><strong data-unit="minutes">00</strong><span>Menit</span></div>
+              <div class="lp-countdown-item"><strong data-unit="seconds">00</strong><span>Detik</span></div>
+            </div>
+            <div class="lp-countdown-expired"></div>
+          </div>`;
+        case 'spacer':
+          return `<div style="height:${s.height || '36px'};margin:${s.margin};background:${s.backgroundColor || 'transparent'};border-radius:${s.borderRadius || '0px'}"></div>`;
         default:
           return '';
       }
@@ -139,17 +223,28 @@ ${renderBlocksToHtml(blocks)}
 export function buildStaticPageDocument({
   title,
   bodyHtml,
+  headExtras = '',
+  bodyEndExtras = '',
 }: {
   title: string;
   bodyHtml: string;
+  headExtras?: string;
+  bodyEndExtras?: string;
 }) {
-  return `<!DOCTYPE html>
+  return `<?php
+$lpRequestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$lpPostData = $_POST ?? [];
+$lpQueryData = $_GET ?? [];
+$lpRawInput = file_get_contents('php://input');
+?>
+<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(title)}</title>
   <link rel="stylesheet" href="./style.css" />
+  ${headExtras}
 </head>
 <body>
   <main class="lp-shell">
@@ -157,9 +252,37 @@ export function buildStaticPageDocument({
 ${bodyHtml}
     </div>
   </main>
+  ${bodyEndExtras}
+  <div class="lp-devtools-guard" aria-hidden="true">
+    <div class="lp-devtools-card">Inspect dibatasi di halaman publish ini.</div>
+  </div>
+  <script>
+    window.__LP_REQUEST__ = <?php echo json_encode([
+      'method' => $lpRequestMethod,
+      'post' => $lpPostData,
+      'query' => $lpQueryData,
+      'raw' => $lpRawInput,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
+  </script>
   <script src="./script.js" defer></script>
 </body>
 </html>`;
+}
+
+export function buildStaticPageHtaccess() {
+  return `DirectoryIndex index.php
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.php(?:[\s?]|$) [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [L]
+</IfModule>`;
 }
 
 export function buildStaticPageCss() {
@@ -207,6 +330,81 @@ img {
   box-shadow: 0 30px 60px -30px rgba(15, 23, 42, 0.35);
 }
 
+.lp-devtools-guard {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.92);
+  z-index: 9999;
+}
+
+.lp-devtools-card {
+  max-width: 360px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 20px 24px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.7;
+  box-shadow: 0 24px 60px -32px rgba(0, 0, 0, 0.6);
+}
+
+.lp-countdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lp-countdown-item {
+  padding: 12px 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  text-align: center;
+}
+
+.lp-countdown-item strong {
+  display: block;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.lp-countdown-item span {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lp-countdown-expired {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.82;
+}
+
+html.lp-devtools-locked,
+html.lp-devtools-locked body {
+  overflow: hidden;
+  background: #0f172a;
+}
+
+html.lp-devtools-locked .lp-shell {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+html.lp-devtools-locked .lp-devtools-guard {
+  display: flex;
+}
+
 @media (max-width: 640px) {
   .lp-shell {
     padding: 0;
@@ -222,7 +420,141 @@ img {
 }
 
 export function buildStaticPageScript() {
-  return `document.addEventListener("click", function(event) {
+  return `(function() {
+  var root = document.documentElement;
+  var guardThreshold = 120;
+  var devtoolsOpen = false;
+  var pageLocked = false;
+
+  function collectWindows() {
+    var targets = [window];
+
+    try {
+      if (window.parent && window.parent !== window) {
+        targets.push(window.parent);
+      }
+    } catch {}
+
+    try {
+      if (window.top && window.top !== window && targets.indexOf(window.top) === -1) {
+        targets.push(window.top);
+      }
+    } catch {}
+
+    return targets;
+  }
+
+  function lockPage() {
+    if (pageLocked) return;
+
+    pageLocked = true;
+    root.classList.add("lp-devtools-locked");
+
+    document.body.innerHTML = '<div class="lp-devtools-guard" aria-hidden="true"><div class="lp-devtools-card">Inspect terdeteksi. Tampilan halaman disembunyikan.</div></div>';
+  }
+
+  function blockShortcut(event) {
+    var key = (event.key || "").toLowerCase();
+    var isCtrlOrMeta = event.ctrlKey || event.metaKey;
+    var isInspectCombo = event.ctrlKey && event.shiftKey && ["i", "j", "c"].indexOf(key) >= 0;
+    var isSourceCombo = isCtrlOrMeta && key === "u";
+    var isF12 = key === "f12";
+
+    if (isInspectCombo || isSourceCombo || isF12) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  function syncDevtoolsState() {
+    var shouldLock = collectWindows().some(function(targetWindow) {
+      try {
+        var widthGap = Math.abs(targetWindow.outerWidth - targetWindow.innerWidth);
+        var heightGap = Math.abs(targetWindow.outerHeight - targetWindow.innerHeight);
+
+        return widthGap > guardThreshold || heightGap > guardThreshold;
+      } catch {
+        return false;
+      }
+    });
+
+    if (shouldLock === devtoolsOpen) return;
+
+    devtoolsOpen = shouldLock;
+    if (shouldLock) {
+      lockPage();
+    }
+  }
+
+  document.addEventListener("contextmenu", function(event) {
+    event.preventDefault();
+  });
+
+  document.addEventListener("keydown", blockShortcut, true);
+  window.addEventListener("resize", syncDevtoolsState);
+  syncDevtoolsState();
+  window.setInterval(syncDevtoolsState, 1000);
+
+  function updateCountdowns() {
+    var countdowns = document.querySelectorAll("[data-countdown-end]");
+
+    countdowns.forEach(function(node) {
+      if (!(node instanceof HTMLElement)) return;
+
+      var endValue = node.getAttribute("data-countdown-end") || "";
+      if (!endValue) return;
+
+      var target = new Date(endValue);
+      if (Number.isNaN(target.getTime())) return;
+
+      var diff = target.getTime() - Date.now();
+      var expiredLabel = node.getAttribute("data-countdown-expired") || "Promo sudah berakhir";
+      var expiredNode = node.parentElement ? node.parentElement.querySelector(".lp-countdown-expired") : null;
+
+      if (diff <= 0) {
+        ["days", "hours", "minutes", "seconds"].forEach(function(unit) {
+          var targetNode = node.querySelector('[data-unit="' + unit + '"]');
+          if (targetNode) targetNode.textContent = "00";
+        });
+
+        if (expiredNode) {
+          expiredNode.textContent = expiredLabel;
+        }
+
+        return;
+      }
+
+      var seconds = Math.floor(diff / 1000);
+      var days = Math.floor(seconds / 86400);
+      seconds -= days * 86400;
+      var hours = Math.floor(seconds / 3600);
+      seconds -= hours * 3600;
+      var minutes = Math.floor(seconds / 60);
+      seconds -= minutes * 60;
+
+      var values = {
+        days: String(days).padStart(2, "0"),
+        hours: String(hours).padStart(2, "0"),
+        minutes: String(minutes).padStart(2, "0"),
+        seconds: String(seconds).padStart(2, "0")
+      };
+
+      Object.entries(values).forEach(function(entry) {
+        var targetNode = node.querySelector('[data-unit="' + entry[0] + '"]');
+        if (targetNode) targetNode.textContent = entry[1];
+      });
+
+      if (expiredNode) {
+        expiredNode.textContent = "";
+      }
+    });
+  }
+
+  updateCountdowns();
+  window.setInterval(updateCountdowns, 1000);
+})();
+
+document.addEventListener("click", function(event) {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
 

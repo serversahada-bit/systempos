@@ -6,11 +6,13 @@ import {
   Block,
   buildStaticPageCss,
   buildStaticPageDocument,
+  buildStaticPageHtaccess,
   buildStaticPageScript,
   buildStoredHtml,
   renderBlocksToHtml,
   sanitizeSlug,
 } from '@/lib/landing-page-renderer';
+import { buildAnalyticsSnippets, parseLandingPageAnalytics } from '@/lib/landing-page-analytics';
 
 const execFileAsync = promisify(execFile);
 
@@ -20,6 +22,7 @@ export type PublishLandingPageInput = {
   title: string;
   slug: string;
   blocks: Block[];
+  analyticsJson?: string | null;
 };
 
 export type PublishLandingPageResult = {
@@ -248,10 +251,11 @@ async function deployWithSftp({
         const sftpBatchFile = path.join(tempDir, `sftp-${sanitizeSlug(slug)}-${Date.now()}.txt`);
         const batchContent = [
           `mkdir "${remotePath}/assets"`,
-          `put "${normalizedLocalDir}/index.html" "${remotePath}/index.html"`,
+          `put "${normalizedLocalDir}/index.php" "${remotePath}/index.php"`,
           `put "${normalizedLocalDir}/style.css" "${remotePath}/style.css"`,
           `put "${normalizedLocalDir}/script.js" "${remotePath}/script.js"`,
           `put "${normalizedLocalDir}/manifest.json" "${remotePath}/manifest.json"`,
+          `put "${normalizedLocalDir}/.htaccess" "${remotePath}/.htaccess"`,
         ];
 
         const assetsLocalDir = path.join(localDir, 'assets');
@@ -284,10 +288,11 @@ async function deployWithSftp({
         const sftpBatchFile = path.join(tempDir, `sftp-${sanitizeSlug(slug)}-${Date.now()}.txt`);
         const batchContent = [
           `mkdir "${remotePath}/assets"`,
-          `put "${normalizedLocalDir}/index.html" "${remotePath}/index.html"`,
+          `put "${normalizedLocalDir}/index.php" "${remotePath}/index.php"`,
           `put "${normalizedLocalDir}/style.css" "${remotePath}/style.css"`,
           `put "${normalizedLocalDir}/script.js" "${remotePath}/script.js"`,
           `put "${normalizedLocalDir}/manifest.json" "${remotePath}/manifest.json"`,
+          `put "${normalizedLocalDir}/.htaccess" "${remotePath}/.htaccess"`,
         ];
 
         const assetsLocalDir = path.join(localDir, 'assets');
@@ -334,6 +339,7 @@ export async function publishLandingPageBundle({
   title,
   slug,
   blocks,
+  analyticsJson,
 }: PublishLandingPageInput): Promise<PublishLandingPageResult> {
   const safeSlug = sanitizeSlug(slug);
   if (!safeSlug) {
@@ -349,10 +355,21 @@ export async function publishLandingPageBundle({
   const localizedBlocks = await localizeAssets(blocks, assetsDir);
   const bodyHtml = renderBlocksToHtml(localizedBlocks);
   const htmlData = buildStoredHtml(blocks);
+  const analyticsSnippets = buildAnalyticsSnippets(parseLandingPageAnalytics(analyticsJson || null));
 
-  await writeFile(path.join(outputDir, 'index.html'), buildStaticPageDocument({ title, bodyHtml }), 'utf8');
+  await writeFile(
+    path.join(outputDir, 'index.php'),
+    buildStaticPageDocument({
+      title,
+      bodyHtml,
+      headExtras: analyticsSnippets.headHtml,
+      bodyEndExtras: analyticsSnippets.bodyHtml,
+    }),
+    'utf8'
+  );
   await writeFile(path.join(outputDir, 'style.css'), buildStaticPageCss(), 'utf8');
   await writeFile(path.join(outputDir, 'script.js'), buildStaticPageScript(), 'utf8');
+  await writeFile(path.join(outputDir, '.htaccess'), buildStaticPageHtaccess(), 'utf8');
   await writeFile(
     path.join(outputDir, 'manifest.json'),
     JSON.stringify(
@@ -376,7 +393,7 @@ export async function publishLandingPageBundle({
     htmlData,
     deployStatus: deployResult.status,
     deployMessage: deployResult.message,
-    exportedFiles: ['index.html', 'style.css', 'script.js', 'manifest.json', 'assets/'],
+    exportedFiles: ['index.php', '.htaccess', 'style.css', 'script.js', 'manifest.json', 'assets/'],
     remotePath: deployResult.remotePath,
   };
 }

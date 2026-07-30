@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { publishLandingPageBundle } from '@/lib/landing-page-publisher';
 import { Block } from '@/lib/landing-page-renderer';
+import { saveLandingPageAnalyticsBySlug } from '@/lib/landing-page-analytics-store';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, slug, blocks_json, domain, domain_status } = body;
+    const { title, slug, blocks_json, domain, domain_status, analytics_json } = body;
 
     if (!slug || !blocks_json) {
       return NextResponse.json(
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
       title: title || 'Tanpa Judul',
       slug,
       blocks,
+      analyticsJson: typeof analytics_json === 'string' ? analytics_json : null,
     });
 
     const landingPage = await prisma.landing_pages.upsert({
@@ -53,6 +55,11 @@ export async function POST(req: Request) {
         domain_status: domain ? domain_status || 'pending' : 'inactive',
       },
     });
+
+    await saveLandingPageAnalyticsBySlug(
+      landingPage.slug,
+      typeof analytics_json === 'string' ? analytics_json : null
+    );
 
     return NextResponse.json(
       {

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { saveLandingPageAnalyticsBySlug } from '@/lib/landing-page-analytics-store';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { title, slug, html_data, blocks_json, status, domain, domain_status } = body;
+    const { title, slug, html_data, blocks_json, status, domain, domain_status, analytics_json } = body;
 
     if (!slug || !html_data) {
       return NextResponse.json(
@@ -34,6 +35,8 @@ export async function POST(req: Request) {
         domain_status: domain ? 'pending' : 'inactive',
       },
     });
+
+    await saveLandingPageAnalyticsBySlug(landingPage.slug, typeof analytics_json === 'string' ? analytics_json : null);
 
     return NextResponse.json(
       { message: 'Landing page berhasil disimpan', data: landingPage },

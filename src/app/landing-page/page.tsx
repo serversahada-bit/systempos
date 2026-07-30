@@ -409,8 +409,17 @@ export default function LandingPage() {
                       </tr>
                     ) : (
                       filteredData.map((row) => {
-                        const fullDomain = baseDomain && row.rawSlug ? `${row.rawSlug}.${baseDomain}` : row.domain;
-                        const linkHref = fullDomain ? `https://${fullDomain}` : row.slug;
+                        const normalizedBaseDomain = baseDomain.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+                        const customDomain = row.domain?.trim() || '';
+                        const usesActiveCustomDomain = customDomain.length > 0 && row.domain_status === 'active';
+                        const publicPathUrl =
+                          normalizedBaseDomain && row.rawSlug ? `https://${normalizedBaseDomain}/${row.rawSlug}` : row.slug;
+                        const displayUrl = usesActiveCustomDomain
+                          ? customDomain
+                          : normalizedBaseDomain && row.rawSlug
+                            ? `${normalizedBaseDomain}/${row.rawSlug}`
+                            : row.slug;
+                        const linkHref = usesActiveCustomDomain ? `https://${customDomain}` : publicPathUrl;
 
                         return (
                           <tr key={row.id} className="border-b border-slate-100 transition hover:bg-slate-50/80">
@@ -474,10 +483,10 @@ export default function LandingPage() {
                             </td>
 
                             <td className="px-6 py-5 align-top">
-                              {fullDomain ? (
+                              {displayUrl ? (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium text-slate-700">{fullDomain}</span>
+                                    <span className="text-xs font-medium text-slate-700 break-all">{displayUrl}</span>
                                   </div>
                                   <DomainStatus status={row.domain_status} />
                                 </div>

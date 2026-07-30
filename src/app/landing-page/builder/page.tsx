@@ -6,10 +6,12 @@ import { useSearchParams } from 'next/navigation';
 import Swal from 'sweetalert2';
 import {
   AlignLeft,
+  Check,
   ChevronDown,
   ChevronUp,
   ChevronsLeft,
   ChevronsRight,
+  CopyPlus,
   GripVertical,
   Image as ImageIcon,
   List,
@@ -32,11 +34,65 @@ import {
   Video,
   MessageCircleQuestion,
   PanelBottom,
+  Pencil,
 } from 'lucide-react';
 import { Block, BlockType, buildStoredHtml, sanitizeSlug } from '@/lib/landing-page-renderer';
+import {
+  LandingPageAnalyticsConfig,
+  META_PIXEL_EVENT_OPTIONS,
+  MetaPixelEvent,
+  parseLandingPageAnalytics,
+  serializeLandingPageAnalytics,
+} from '@/lib/landing-page-analytics';
 
 function generateId() {
   return Math.random().toString(36).slice(2, 9);
+}
+
+function buildDefaultFutureDate() {
+  const future = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const timezoneOffset = future.getTimezoneOffset() * 60000;
+  return new Date(future.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function getCountdownPreview(endDate: string) {
+  const target = new Date(endDate);
+  if (Number.isNaN(target.getTime())) {
+    return { days: '00', hours: '00', minutes: '00', seconds: '00', expired: true };
+  }
+
+  const diff = target.getTime() - Date.now();
+  if (diff <= 0) {
+    return { days: '00', hours: '00', minutes: '00', seconds: '00', expired: true };
+  }
+
+  let totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  totalSeconds -= days * 86400;
+  const hours = Math.floor(totalSeconds / 3600);
+  totalSeconds -= hours * 3600;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds - minutes * 60;
+
+  return {
+    days: String(days).padStart(2, '0'),
+    hours: String(hours).padStart(2, '0'),
+    minutes: String(minutes).padStart(2, '0'),
+    seconds: String(seconds).padStart(2, '0'),
+    expired: false,
+  };
+}
+
+function createEmptyAnalyticsConfig(): LandingPageAnalyticsConfig {
+  return {
+    id: `analytics-${generateId()}`,
+    type: 'meta_pixel',
+    name: '',
+    pixelId: '',
+    conversionApiAccessToken: '',
+    testCode: '',
+    openEvents: ['ViewContent'],
+  };
 }
 
 function defaultBlock(type: BlockType): Block {
@@ -197,6 +253,103 @@ function defaultBlock(type: BlockType): Block {
         content: { brandName: 'Toko Saya', contactInfo: 'Hubungi: 0812-3456-7890' },
         styles: { textAlign: 'center', padding: '24px 16px', margin: '16px 0 0 0', backgroundColor: '#111827', color: '#f3f4f6', borderRadius: '0px' },
       };
+    case 'gallery':
+      return {
+        id,
+        type,
+        content: {
+          image1: '',
+          image2: '',
+          image3: '',
+          image4: '',
+        },
+        styles: {
+          padding: '16px',
+          margin: '16px',
+          gap: '12px',
+          borderRadius: '18px',
+        },
+      };
+    case 'form':
+      return {
+        id,
+        type,
+        content: {
+          title: 'Form Pemesanan Cepat',
+          subtitle: 'Isi data Anda, tim kami akan segera menghubungi untuk follow up.',
+          namePlaceholder: 'Nama lengkap',
+          phonePlaceholder: 'No. WhatsApp aktif',
+          emailPlaceholder: 'Email',
+          messagePlaceholder: 'Tulis kebutuhan Anda',
+          buttonText: 'Kirim Sekarang',
+          method: 'post',
+          action: '',
+          successMessage: 'Terima kasih, data Anda sudah kami terima.',
+        },
+        styles: {
+          padding: '20px',
+          margin: '16px',
+          gap: '12px',
+          borderRadius: '20px',
+          backgroundColor: '#f8fafc',
+          color: '#111827',
+          buttonBackgroundColor: '#7c3aed',
+          buttonTextColor: '#ffffff',
+          buttonBorderRadius: '999px',
+        },
+      };
+    case 'stats':
+      return {
+        id,
+        type,
+        content: {
+          value1: '1.2K+',
+          label1: 'Pelanggan',
+          value2: '4.9/5',
+          label2: 'Rating',
+          value3: '24/7',
+          label3: 'Support',
+        },
+        styles: {
+          padding: '20px',
+          margin: '16px',
+          gap: '12px',
+          borderRadius: '20px',
+          backgroundColor: '#111827',
+          color: '#ffffff',
+          fontSize: '28px',
+        },
+      };
+    case 'countdown':
+      return {
+        id,
+        type,
+        content: {
+          label: 'Promo berakhir dalam',
+          endDate: buildDefaultFutureDate(),
+          expiredText: 'Promo sudah berakhir',
+        },
+        styles: {
+          padding: '20px',
+          margin: '16px',
+          borderRadius: '20px',
+          backgroundColor: '#7c3aed',
+          color: '#ffffff',
+          textAlign: 'center',
+        },
+      };
+    case 'spacer':
+      return {
+        id,
+        type,
+        content: {},
+        styles: {
+          height: '40px',
+          margin: '0px',
+          backgroundColor: 'transparent',
+          borderRadius: '0px',
+        },
+      };
     default:
       return {
         id,
@@ -220,6 +373,11 @@ const PALETTE: { type: BlockType; label: string; icon: React.ReactNode }[] = [
   { type: 'video', label: 'Video', icon: <Video size={16} /> },
   { type: 'faq', label: 'FAQ', icon: <MessageCircleQuestion size={16} /> },
   { type: 'footer', label: 'Footer', icon: <PanelBottom size={16} /> },
+  { type: 'gallery', label: 'Gallery', icon: <ImageIcon size={16} /> },
+  { type: 'form', label: 'Form', icon: <AlignLeft size={16} /> },
+  { type: 'stats', label: 'Stats', icon: <Square size={16} /> },
+  { type: 'countdown', label: 'Countdown', icon: <ChevronsRight size={16} /> },
+  { type: 'spacer', label: 'Spacer', icon: <Minus size={16} /> },
 ];
 
 function uploadImage(onSuccess: (url: string) => void) {
@@ -438,7 +596,7 @@ function BlockRenderer({
       );
     case 'hero':
       return (
-        <div style={{ textAlign: s.textAlign as any, padding: s.padding, backgroundColor: s.backgroundColor, color: s.color, borderRadius: s.borderRadius, margin: s.margin }} onClick={onClick} className="cursor-pointer">
+        <div style={{ textAlign: s.textAlign as React.CSSProperties['textAlign'], padding: s.padding, backgroundColor: s.backgroundColor, color: s.color, borderRadius: s.borderRadius, margin: s.margin }} onClick={onClick} className="cursor-pointer">
           <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '12px', lineHeight: 1.2, outline: 'none' }} contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('title', e.currentTarget.innerText)}>{block.content.title}</h1>
           <p style={{ fontSize: '16px', marginBottom: '24px', opacity: 0.9, lineHeight: 1.5, outline: 'none' }} contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('subtitle', e.currentTarget.innerText)}>{block.content.subtitle}</p>
           {block.content.buttonText && (
@@ -478,6 +636,189 @@ function BlockRenderer({
           <div style={{ marginTop: '16px', opacity: 0.6 }}>&copy; {new Date().getFullYear()} Hak Cipta Dilindungi.</div>
         </div>
       );
+    case 'gallery': {
+      const galleryImages = ['image1', 'image2', 'image3', 'image4'].map((key, index) => {
+        const src = block.content[key];
+        const alt = block.content[`alt${index + 1}`] || `Gallery ${index + 1}`;
+
+        return (
+          <div
+            key={key}
+            className="relative overflow-hidden rounded-2xl border border-dashed border-purple-200 bg-purple-50/60"
+            style={{ borderRadius: s.borderRadius, aspectRatio: '1 / 1' }}
+          >
+            {src ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={alt} className="h-full w-full object-cover" />
+                <label className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                  <span className="text-xs font-semibold text-white">Ganti gambar</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={uploadImage((url) => onContentChange(key, url))}
+                  />
+                </label>
+              </>
+            ) : (
+              <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 text-purple-500">
+                <ImageIcon size={26} />
+                <span className="text-[11px] font-semibold">Upload gambar {index + 1}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={uploadImage((url) => onContentChange(key, url))}
+                />
+              </label>
+            )}
+          </div>
+        );
+      });
+
+      return (
+        <div style={{ padding: s.padding, margin: s.margin }} onClick={onClick} className="cursor-pointer">
+          <div className="grid grid-cols-2" style={{ gap: s.gap }}>
+            {galleryImages}
+          </div>
+        </div>
+      );
+    }
+    case 'form':
+      return (
+        <div
+          style={{
+            padding: s.padding,
+            margin: s.margin,
+            backgroundColor: s.backgroundColor,
+            color: s.color,
+            borderRadius: s.borderRadius,
+          }}
+          onClick={onClick}
+          className="cursor-pointer"
+        >
+          <div className="mb-2 text-2xl font-extrabold leading-tight">{block.content.title}</div>
+          <div className="mb-4 text-sm leading-6 opacity-80">{block.content.subtitle}</div>
+          <div className="grid" style={{ gap: s.gap || '12px' }}>
+            <input
+              readOnly
+              value={block.content.namePlaceholder || ''}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400 outline-none"
+            />
+            <input
+              readOnly
+              value={block.content.phonePlaceholder || ''}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400 outline-none"
+            />
+            <input
+              readOnly
+              value={block.content.emailPlaceholder || ''}
+              className="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400 outline-none"
+            />
+            <textarea
+              readOnly
+              value={block.content.messagePlaceholder || ''}
+              className="min-h-28 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400 outline-none"
+            />
+            <button
+              type="button"
+              className="rounded-full px-4 py-3 text-sm font-bold"
+              style={{
+                backgroundColor: s.buttonBackgroundColor,
+                color: s.buttonTextColor,
+                borderRadius: s.buttonBorderRadius,
+              }}
+            >
+              {block.content.buttonText}
+            </button>
+          </div>
+        </div>
+      );
+    case 'stats': {
+      const statItems = [
+        { value: block.content.value1, label: block.content.label1 },
+        { value: block.content.value2, label: block.content.label2 },
+        { value: block.content.value3, label: block.content.label3 },
+      ];
+
+      return (
+        <div
+          style={{
+            padding: s.padding,
+            margin: s.margin,
+            backgroundColor: s.backgroundColor,
+            color: s.color,
+            borderRadius: s.borderRadius,
+          }}
+          onClick={onClick}
+          className="cursor-pointer"
+        >
+          <div className="grid grid-cols-3" style={{ gap: s.gap || '12px' }}>
+            {statItems.map((item, index) => (
+              <div key={`${item.label}-${index}`} className="text-center">
+                <div style={{ fontSize: s.fontSize }} className="font-black leading-none">
+                  {item.value}
+                </div>
+                <div className="mt-1 text-[11px] leading-5 opacity-75">{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    case 'countdown': {
+      const countdownPreview = getCountdownPreview(block.content.endDate || '');
+      const countdownItems = [
+        { label: 'Hari', value: countdownPreview.days },
+        { label: 'Jam', value: countdownPreview.hours },
+        { label: 'Menit', value: countdownPreview.minutes },
+        { label: 'Detik', value: countdownPreview.seconds },
+      ];
+
+      return (
+        <div
+          style={{
+            padding: s.padding,
+            margin: s.margin,
+            backgroundColor: s.backgroundColor,
+            color: s.color,
+            borderRadius: s.borderRadius,
+            textAlign: s.textAlign as React.CSSProperties['textAlign'],
+          }}
+          onClick={onClick}
+          className="cursor-pointer"
+        >
+          <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.18em] opacity-75">{block.content.label}</div>
+          <div className="grid grid-cols-4 gap-2">
+            {countdownItems.map((item) => (
+              <div key={item.label} className="rounded-2xl bg-white/15 px-2 py-3 text-center backdrop-blur-sm">
+                <div className="text-xl font-black leading-none">{item.value}</div>
+                <div className="mt-1 text-[10px] uppercase tracking-[0.18em] opacity-75">{item.label}</div>
+              </div>
+            ))}
+          </div>
+          {countdownPreview.expired ? (
+            <div className="mt-3 text-xs opacity-80">{block.content.expiredText || 'Promo sudah berakhir'}</div>
+          ) : null}
+        </div>
+      );
+    }
+    case 'spacer':
+      return (
+        <div
+          style={{
+            height: s.height,
+            margin: s.margin,
+            backgroundColor: s.backgroundColor,
+            borderRadius: s.borderRadius,
+          }}
+          onClick={onClick}
+          className="flex cursor-pointer items-center justify-center border border-dashed border-gray-300 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400"
+        >
+          Spacer {s.height}
+        </div>
+      );
     default:
       return null;
   }
@@ -501,6 +842,40 @@ function PropertiesPanel({
         className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400"
         onChange={(event) => (isStyle ? onChangeStyle(key, event.target.value) : onChange(key, event.target.value))}
       />
+    </div>
+  );
+
+  const textarea = (label: string, key: string, value: string, isStyle = false, rows = 3) => (
+    <div className="mb-3">
+      <label className="mb-1 block text-[10px] font-semibold uppercase text-gray-500">{label}</label>
+      <textarea
+        rows={rows}
+        value={value}
+        className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-purple-400"
+        onChange={(event) => (isStyle ? onChangeStyle(key, event.target.value) : onChange(key, event.target.value))}
+      />
+    </div>
+  );
+
+  const imageField = (label: string, key: string, preview?: string) => (
+    <div className="mb-3">
+      <label className="mb-1 block text-[10px] font-semibold uppercase text-gray-500">{label}</label>
+      <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded border border-dashed border-purple-300 px-2 py-2.5 text-xs font-semibold text-purple-600 transition hover:bg-purple-50">
+        <Upload size={13} />
+        Upload Gambar
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={uploadImage((url) => onChange(key, url))}
+        />
+      </label>
+      {preview ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview} alt={label} className="mt-2 rounded" />
+        </>
+      ) : null}
     </div>
   );
 
@@ -576,6 +951,49 @@ function PropertiesPanel({
           {input('Info Kontak', 'contactInfo', c.contactInfo || '')}
         </>
       )}
+      {block.type === 'gallery' && (
+        <>
+          {imageField('Gambar 1', 'image1', c.image1)}
+          {imageField('Gambar 2', 'image2', c.image2)}
+          {imageField('Gambar 3', 'image3', c.image3)}
+          {imageField('Gambar 4', 'image4', c.image4)}
+        </>
+      )}
+      {block.type === 'form' && (
+        <>
+          {input('Judul Form', 'title', c.title || '')}
+          {textarea('Subjudul', 'subtitle', c.subtitle || '', false, 4)}
+          {input('Placeholder Nama', 'namePlaceholder', c.namePlaceholder || '')}
+          {input('Placeholder WhatsApp', 'phonePlaceholder', c.phonePlaceholder || '')}
+          {input('Placeholder Email', 'emailPlaceholder', c.emailPlaceholder || '')}
+          {textarea('Placeholder Pesan', 'messagePlaceholder', c.messagePlaceholder || '', false, 3)}
+          {input('Teks Tombol', 'buttonText', c.buttonText || '')}
+          {input('Form Action URL', 'action', c.action || '')}
+          {textarea('Pesan Sukses', 'successMessage', c.successMessage || '', false, 3)}
+        </>
+      )}
+      {block.type === 'stats' && (
+        <>
+          {input('Value 1', 'value1', c.value1 || '')}
+          {input('Label 1', 'label1', c.label1 || '')}
+          {input('Value 2', 'value2', c.value2 || '')}
+          {input('Label 2', 'label2', c.label2 || '')}
+          {input('Value 3', 'value3', c.value3 || '')}
+          {input('Label 3', 'label3', c.label3 || '')}
+        </>
+      )}
+      {block.type === 'countdown' && (
+        <>
+          {input('Label', 'label', c.label || '')}
+          {input('Tanggal Berakhir', 'endDate', c.endDate || '', false, 'datetime-local')}
+          {input('Pesan Saat Habis', 'expiredText', c.expiredText || '')}
+        </>
+      )}
+      {block.type === 'spacer' && (
+        <div className="mb-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-[11px] leading-5 text-gray-500">
+          Gunakan spacer untuk memberi jarak antar section seperti di builder page modern.
+        </div>
+      )}
 
       <div className="mb-3 mt-5 flex items-center gap-1 text-[10px] font-bold uppercase text-purple-600">
         <Palette size={11} />
@@ -583,10 +1001,18 @@ function PropertiesPanel({
       </div>
 
       {s.fontSize !== undefined && input('Ukuran Font', 'fontSize', s.fontSize, true)}
+      {s.lineHeight !== undefined && input('Line Height', 'lineHeight', s.lineHeight, true)}
       {s.color !== undefined && input('Warna Teks', 'color', s.color, true, 'color')}
       {s.backgroundColor !== undefined && input('Warna Background', 'backgroundColor', s.backgroundColor, true, 'color')}
       {s.borderRadius !== undefined && input('Border Radius', 'borderRadius', s.borderRadius, true)}
       {s.padding !== undefined && input('Padding', 'padding', s.padding, true)}
+      {s.margin !== undefined && input('Margin', 'margin', s.margin, true)}
+      {s.width !== undefined && input('Lebar', 'width', s.width, true)}
+      {s.height !== undefined && input('Tinggi', 'height', s.height, true)}
+      {s.gap !== undefined && input('Gap', 'gap', s.gap, true)}
+      {s.buttonBackgroundColor !== undefined && input('Warna Tombol', 'buttonBackgroundColor', s.buttonBackgroundColor, true, 'color')}
+      {s.buttonTextColor !== undefined && input('Warna Teks Tombol', 'buttonTextColor', s.buttonTextColor, true, 'color')}
+      {s.buttonBorderRadius !== undefined && input('Radius Tombol', 'buttonBorderRadius', s.buttonBorderRadius, true)}
       {s.textAlign !== undefined && (
         <div className="mb-3">
           <label className="mb-1 block text-[10px] font-semibold uppercase text-gray-500">Rata Teks</label>
@@ -644,7 +1070,10 @@ export default function BuilderPage() {
   const [slug, setSlug] = useState(`my-landing-page-${generateId().slice(0, 4)}`);
   const [domain, setDomain] = useState('');
   const [domainStatus, setDomainStatus] = useState<'inactive' | 'pending' | 'active'>('inactive');
+  const [analyticsConfigs, setAnalyticsConfigs] = useState<LandingPageAnalyticsConfig[]>([]);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+  const [analyticsDraft, setAnalyticsDraft] = useState<LandingPageAnalyticsConfig>(createEmptyAnalyticsConfig);
   const [isLoadingEdit, setIsLoadingEdit] = useState(() => Boolean(editSlug));
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -665,6 +1094,7 @@ export default function BuilderPage() {
         setSlug(page.slug || '');
         setDomain(page.domain || '');
         setDomainStatus(page.domain_status || 'inactive');
+        setAnalyticsConfigs(parseLandingPageAnalytics(page.analytics_json));
 
         if (page.blocks_json) {
           try {
@@ -706,6 +1136,7 @@ export default function BuilderPage() {
 
   const handleSave = async () => {
     const html = buildStoredHtml(blocks);
+    const analyticsJson = serializeLandingPageAnalytics(analyticsConfigs);
     localStorage.setItem('lp_builder_blocks', JSON.stringify(blocks));
     setIsSavingDraft(true);
 
@@ -718,6 +1149,7 @@ export default function BuilderPage() {
           slug,
           html_data: html,
           blocks_json: JSON.stringify(blocks),
+          analytics_json: analyticsJson,
           status: 'Draft',
           domain: domain || null,
         }),
@@ -743,6 +1175,7 @@ export default function BuilderPage() {
   };
 
   const handlePublish = async () => {
+    const analyticsJson = serializeLandingPageAnalytics(analyticsConfigs);
     localStorage.setItem('lp_builder_blocks', JSON.stringify(blocks));
     setIsPublishing(true);
 
@@ -754,6 +1187,7 @@ export default function BuilderPage() {
           title,
           slug,
           blocks_json: JSON.stringify(blocks),
+          analytics_json: analyticsJson,
           domain: domain || null,
           domain_status: domain ? domainStatus : 'inactive',
         }),
@@ -839,6 +1273,65 @@ export default function BuilderPage() {
 
   const canvasWidth =
     device === 'desktop' ? 'max-w-4xl' : device === 'tablet' ? 'max-w-[768px]' : 'max-w-[390px]';
+
+  const openCreateAnalyticsModal = () => {
+    setAnalyticsDraft(createEmptyAnalyticsConfig());
+    setIsAnalyticsModalOpen(true);
+  };
+
+  const openEditAnalyticsModal = (config: LandingPageAnalyticsConfig) => {
+    setAnalyticsDraft({
+      ...config,
+      openEvents: [...config.openEvents],
+    });
+    setIsAnalyticsModalOpen(true);
+  };
+
+  const saveAnalyticsDraft = () => {
+    const normalizedName = analyticsDraft.name.trim();
+    const normalizedPixelId = analyticsDraft.pixelId.replace(/[^0-9]/g, '');
+
+    if (!normalizedName || !normalizedPixelId) {
+      Swal.fire('Data belum lengkap', 'Nama dan Pixel ID wajib diisi.', 'warning');
+      return;
+    }
+
+    const normalizedDraft: LandingPageAnalyticsConfig = {
+      ...analyticsDraft,
+      name: normalizedName,
+      pixelId: normalizedPixelId,
+      conversionApiAccessToken: analyticsDraft.conversionApiAccessToken?.trim() || '',
+      testCode: analyticsDraft.testCode?.trim() || '',
+      openEvents: analyticsDraft.openEvents.length > 0 ? analyticsDraft.openEvents : ['ViewContent'],
+    };
+
+    setAnalyticsConfigs((prev) => {
+      const exists = prev.some((config) => config.id === normalizedDraft.id);
+      if (exists) {
+        return prev.map((config) => (config.id === normalizedDraft.id ? normalizedDraft : config));
+      }
+
+      return [...prev, normalizedDraft];
+    });
+
+    setIsAnalyticsModalOpen(false);
+  };
+
+  const removeAnalyticsConfig = (configId: string) => {
+    setAnalyticsConfigs((prev) => prev.filter((config) => config.id !== configId));
+  };
+
+  const toggleAnalyticsEvent = (eventName: MetaPixelEvent) => {
+    setAnalyticsDraft((prev) => {
+      const exists = prev.openEvents.includes(eventName);
+      return {
+        ...prev,
+        openEvents: exists
+          ? prev.openEvents.filter((item) => item !== eventName)
+          : [...prev.openEvents, eventName],
+      };
+    });
+  };
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#f4f7f9] text-sm">
@@ -1092,7 +1585,7 @@ export default function BuilderPage() {
 
       {isSettingsModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 p-4">
               <h3 className="flex items-center gap-2 font-bold text-gray-800">
                 <Settings2 size={18} className="text-purple-600" />
@@ -1106,7 +1599,7 @@ export default function BuilderPage() {
               </button>
             </div>
 
-            <div className="space-y-5 p-6">
+            <div className="flex-1 space-y-5 overflow-y-auto p-6">
               <div>
                 <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Slug URL</label>
                 <div className="flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 transition focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500">
@@ -1179,14 +1672,202 @@ export default function BuilderPage() {
                   <div>`DEPLOY_PASSWORD` bisa dipakai jika server builder punya `sshpass`</div>
                 </div>
               </div>
+
+              <hr className="border-gray-100" />
+
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-700">Analitik</label>
+                    <p className="mt-1 text-[11px] leading-5 text-gray-500">
+                      Tambahkan Meta Pixel per halaman. Versi ini langsung inject browser pixel dan event saat landing page dibuka.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openCreateAnalyticsModal}
+                    className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-semibold text-purple-700 transition hover:bg-purple-100"
+                  >
+                    <CopyPlus size={13} />
+                    Tambah Analitik
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {analyticsConfigs.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-4 text-[11px] leading-5 text-gray-500">
+                      Belum ada pixel. Tambahkan Meta Pixel agar event seperti <strong>ViewContent</strong> bisa otomatis dikirim saat halaman dibuka.
+                    </div>
+                  ) : (
+                    analyticsConfigs.map((config) => (
+                      <div key={config.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-gray-800">{config.name}</div>
+                            <div className="mt-1 text-xs text-gray-500">Meta Pixel ID: {config.pixelId}</div>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {config.openEvents.map((eventName) => (
+                                <span
+                                  key={eventName}
+                                  className="rounded-full bg-purple-50 px-2 py-1 text-[10px] font-semibold text-purple-700"
+                                >
+                                  {eventName}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditAnalyticsModal(config)}
+                              className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-purple-300 hover:text-purple-700"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeAnalyticsConfig(config.id)}
+                              className="rounded-lg border border-red-200 p-2 text-red-500 transition hover:bg-red-50"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <p className="mt-3 text-[11px] leading-5 text-gray-500">
+                  `Conversion API Access Token` dan `Kode Testing` ikut disimpan sekarang, tapi integrasi server-side CAPI belum diaktifkan di versi ini.
+                </p>
+              </div>
             </div>
 
-            <div className="flex justify-end border-t border-gray-100 bg-gray-50 p-4">
+            <div className="flex shrink-0 justify-end border-t border-gray-100 bg-gray-50 p-4">
               <button
                 onClick={() => setIsSettingsModalOpen(false)}
                 className="rounded-lg bg-purple-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-purple-700"
               >
                 Selesai
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isAnalyticsModalOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4">
+          <div className="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">Tambah Analitik</h3>
+                <p className="mt-1 text-xs text-gray-500">Atur Meta Pixel dan event yang dikirim saat landing page dibuka.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAnalyticsModalOpen(false)}
+                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[75vh] space-y-4 overflow-y-auto p-5">
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Jenis</label>
+                <select
+                  value={analyticsDraft.type}
+                  onChange={() => setAnalyticsDraft((prev) => ({ ...prev, type: 'meta_pixel' }))}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                >
+                  <option value="meta_pixel">Meta Pixel</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Nama</label>
+                <input
+                  value={analyticsDraft.name}
+                  onChange={(event) => setAnalyticsDraft((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="Masukkan nama pixel"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Pixel ID</label>
+                <input
+                  value={analyticsDraft.pixelId}
+                  onChange={(event) =>
+                    setAnalyticsDraft((prev) => ({ ...prev, pixelId: event.target.value.replace(/[^0-9]/g, '') }))
+                  }
+                  placeholder="Masukkan Pixel ID"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Conversion API Access Token</label>
+                <textarea
+                  rows={4}
+                  value={analyticsDraft.conversionApiAccessToken || ''}
+                  onChange={(event) => setAnalyticsDraft((prev) => ({ ...prev, conversionApiAccessToken: event.target.value }))}
+                  placeholder="Masukkan Conversion API Access Token"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Kode Testing</label>
+                <input
+                  value={analyticsDraft.testCode || ''}
+                  onChange={(event) => setAnalyticsDraft((prev) => ({ ...prev, testCode: event.target.value }))}
+                  placeholder="Cth: TEST12345"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Events Saat Landing Page Terbuka</label>
+                <div className="grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
+                  {META_PIXEL_EVENT_OPTIONS.map((eventName) => {
+                    const checked = analyticsDraft.openEvents.includes(eventName);
+
+                    return (
+                      <button
+                        key={eventName}
+                        type="button"
+                        onClick={() => toggleAnalyticsEvent(eventName)}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
+                          checked
+                            ? 'border-purple-300 bg-purple-50 text-purple-700'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-purple-200'
+                        }`}
+                      >
+                        <span>{eventName}</span>
+                        {checked ? <Check size={14} /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setIsAnalyticsModalOpen(false)}
+                className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveAnalyticsDraft}
+                className="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-700"
+              >
+                Simpan
               </button>
             </div>
           </div>
