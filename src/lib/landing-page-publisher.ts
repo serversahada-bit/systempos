@@ -42,7 +42,11 @@ async function pathExists(targetPath: string) {
 }
 
 async function findCommand(command: string) {
-  const candidates = process.platform === 'win32' ? [`${command}.exe`, `${command}.cmd`, command] : [command];
+  if (process.platform !== 'win32') {
+    return command;
+  }
+
+  const candidates = [`${command}.exe`, `${command}.cmd`, command];
 
   for (const candidate of candidates) {
     try {
