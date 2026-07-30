@@ -612,7 +612,7 @@ export default function BuilderPage() {
       await Swal.fire({
         icon: 'success',
         title: 'Draft disimpan',
-        html: `Draft berhasil disimpan.<br><br><div class="p-3 bg-gray-50 border rounded text-sm text-left"><span class="text-gray-500 font-semibold block mb-1">Preview Link:</span><a href="/lp/${slug}" target="_blank" class="text-purple-600 hover:underline">http://localhost:3000/lp/${slug}</a></div>`,
+        html: `Draft berhasil disimpan.<br><br><div class="p-3 bg-gray-50 border rounded text-sm text-left"><span class="text-gray-500 font-semibold block mb-1">Preview Link:</span><a href="/lp/${slug}" target="_blank" class="text-purple-600 hover:underline">${window.location.origin}/lp/${slug}</a></div>`,
         confirmButtonText: 'Tutup',
         confirmButtonColor: '#7e22ce',
       });
@@ -657,7 +657,7 @@ export default function BuilderPage() {
       await Swal.fire({
         icon: 'success',
         title: 'Publish berhasil',
-        html: `Landing page berhasil dipublish.<br><br><div class="p-3 bg-green-50 border border-green-200 rounded text-sm text-left"><span class="text-green-700 font-semibold block mb-1">Preview Link:</span><a href="/lp/${slug}" target="_blank" class="text-green-600 hover:underline font-medium">http://localhost:3000/lp/${slug}</a></div><div class="mt-3 p-3 bg-${deployTone}-50 border border-${deployTone}-200 rounded text-sm text-left"><span class="text-${deployTone}-700 font-semibold block mb-1">Status Deploy:</span><div class="text-${deployTone}-700">${publishInfo?.deploy_message || 'Bundle static berhasil dibuat.'}</div>${publishInfo?.remote_path ? `<div class="mt-2 text-xs text-${deployTone}-700"><strong>Remote Path:</strong> ${publishInfo.remote_path}</div>` : ''}${publishInfo?.output_dir ? `<div class="mt-2 text-xs text-${deployTone}-700"><strong>Output Lokal:</strong> ${publishInfo.output_dir}</div>` : ''}</div>`,
+        html: `Landing page berhasil dipublish.<br><br><div class="p-3 bg-green-50 border border-green-200 rounded text-sm text-left"><span class="text-green-700 font-semibold block mb-1">Preview Link:</span><a href="/lp/${slug}" target="_blank" class="text-green-600 hover:underline font-medium">${window.location.origin}/lp/${slug}</a></div><div class="mt-3 p-3 bg-${deployTone}-50 border border-${deployTone}-200 rounded text-sm text-left"><span class="text-${deployTone}-700 font-semibold block mb-1">Status Deploy:</span><div class="text-${deployTone}-700">${publishInfo?.deploy_message || 'Bundle static berhasil dibuat.'}</div>${publishInfo?.remote_path ? `<div class="mt-2 text-xs text-${deployTone}-700"><strong>Remote Path:</strong> ${publishInfo.remote_path}</div>` : ''}${publishInfo?.output_dir ? `<div class="mt-2 text-xs text-${deployTone}-700"><strong>Output Lokal:</strong> ${publishInfo.output_dir}</div>` : ''}</div>`,
         confirmButtonText: 'Tutup',
         confirmButtonColor: '#4c1d95',
       });

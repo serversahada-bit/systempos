@@ -2,4 +2,4 @@
 NIXPACKS_NODE_VERSION = "22"
 
 [phases.setup]
-aptPkgs = ["openssh-client", "sshpass"]
+nixPkgs = ["openssh", "sshpass"]
