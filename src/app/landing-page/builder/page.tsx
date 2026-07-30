@@ -89,6 +89,7 @@ function createEmptyAnalyticsConfig(): LandingPageAnalyticsConfig {
     type: 'meta_pixel',
     name: '',
     pixelId: '',
+    rawPixelCode: '',
     conversionApiAccessToken: '',
     testCode: '',
     openEvents: ['ViewContent'],
@@ -1300,6 +1301,7 @@ export default function BuilderPage() {
       ...analyticsDraft,
       name: normalizedName,
       pixelId: normalizedPixelId,
+      rawPixelCode: analyticsDraft.rawPixelCode?.trim() || '',
       conversionApiAccessToken: analyticsDraft.conversionApiAccessToken?.trim() || '',
       testCode: analyticsDraft.testCode?.trim() || '',
       openEvents: analyticsDraft.openEvents.length > 0 ? analyticsDraft.openEvents : ['ViewContent'],
@@ -1680,7 +1682,7 @@ export default function BuilderPage() {
                   <div>
                     <label className="block text-xs font-bold uppercase text-gray-700">Analitik</label>
                     <p className="mt-1 text-[11px] leading-5 text-gray-500">
-                      Tambahkan Meta Pixel per halaman. Versi ini langsung inject browser pixel dan event saat landing page dibuka.
+                      Tambahkan Meta Pixel per halaman. Kamu bisa pakai Pixel ID biasa atau paste kode dasar Meta Pixel agar builder inject snippet mentah langsung ke landing page.
                     </p>
                   </div>
                   <button
@@ -1705,6 +1707,9 @@ export default function BuilderPage() {
                           <div className="min-w-0">
                             <div className="text-sm font-semibold text-gray-800">{config.name}</div>
                             <div className="mt-1 text-xs text-gray-500">Meta Pixel ID: {config.pixelId}</div>
+                            {config.rawPixelCode ? (
+                              <div className="mt-1 text-[11px] font-medium text-emerald-600">Mode injek kode dasar aktif</div>
+                            ) : null}
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {config.openEvents.map((eventName) => (
                                 <span
@@ -1805,6 +1810,20 @@ export default function BuilderPage() {
                   placeholder="Masukkan Pixel ID"
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                 />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase text-gray-700">Kode Dasar Meta Pixel</label>
+                <textarea
+                  rows={7}
+                  value={analyticsDraft.rawPixelCode || ''}
+                  onChange={(event) => setAnalyticsDraft((prev) => ({ ...prev, rawPixelCode: event.target.value }))}
+                  placeholder={'Paste script Meta Pixel dari Events Manager di sini. Jika diisi, builder akan inject kode ini langsung ke <head> landing page.'}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 font-mono text-xs leading-5 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+                <p className="mt-2 text-[11px] leading-5 text-gray-500">
+                  Opsional. Cocok jika kamu ingin memakai snippet Meta asli dari Facebook. Jika kolom ini diisi, builder akan memprioritaskan kode ini saat preview dan publish.
+                </p>
               </div>
 
               <div>
