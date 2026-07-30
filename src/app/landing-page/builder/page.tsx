@@ -28,6 +28,10 @@ import {
   Type,
   Upload,
   X,
+  LayoutTemplate,
+  Video,
+  MessageCircleQuestion,
+  PanelBottom,
 } from 'lucide-react';
 import { Block, BlockType, buildStoredHtml, sanitizeSlug } from '@/lib/landing-page-renderer';
 
@@ -148,6 +152,51 @@ function defaultBlock(type: BlockType): Block {
           margin: '8px 16px',
         },
       };
+    case 'hero':
+      return {
+        id,
+        type,
+        content: {
+          title: 'Judul Hero Luar Biasa',
+          subtitle: 'Deskripsi singkat mengenai produk atau layanan Anda.',
+          buttonText: 'Beli Sekarang',
+          buttonLink: '#',
+        },
+        styles: {
+          textAlign: 'center',
+          padding: '48px 16px',
+          backgroundColor: '#f3f4f6',
+          color: '#111827',
+          borderRadius: '16px',
+          margin: '16px',
+        },
+      };
+    case 'video':
+      return {
+        id,
+        type,
+        content: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+        styles: { padding: '0px', margin: '16px', borderRadius: '16px' },
+      };
+    case 'faq':
+      return {
+        id,
+        type,
+        content: {
+          question1: 'Apakah produk ini bergaransi?',
+          answer1: 'Ya, kami memberikan garansi uang kembali.',
+          question2: 'Berapa lama pengirimannya?',
+          answer2: 'Pengiriman memakan waktu 2-3 hari kerja.',
+        },
+        styles: { padding: '16px', margin: '16px', backgroundColor: '#f9fafb', borderRadius: '16px' },
+      };
+    case 'footer':
+      return {
+        id,
+        type,
+        content: { brandName: 'Toko Saya', contactInfo: 'Hubungi: 0812-3456-7890' },
+        styles: { textAlign: 'center', padding: '24px 16px', margin: '16px 0 0 0', backgroundColor: '#111827', color: '#f3f4f6', borderRadius: '0px' },
+      };
     default:
       return {
         id,
@@ -167,6 +216,10 @@ const PALETTE: { type: BlockType; label: string; icon: React.ReactNode }[] = [
   { type: 'list', label: 'Daftar', icon: <List size={16} /> },
   { type: 'testimonial', label: 'Testimoni', icon: <Star size={16} /> },
   { type: 'pricing', label: 'Harga', icon: <Square size={16} /> },
+  { type: 'hero', label: 'Hero', icon: <LayoutTemplate size={16} /> },
+  { type: 'video', label: 'Video', icon: <Video size={16} /> },
+  { type: 'faq', label: 'FAQ', icon: <MessageCircleQuestion size={16} /> },
+  { type: 'footer', label: 'Footer', icon: <PanelBottom size={16} /> },
 ];
 
 function uploadImage(onSuccess: (url: string) => void) {
@@ -383,6 +436,48 @@ function BlockRenderer({
           </span>
         </div>
       );
+    case 'hero':
+      return (
+        <div style={{ textAlign: s.textAlign as any, padding: s.padding, backgroundColor: s.backgroundColor, color: s.color, borderRadius: s.borderRadius, margin: s.margin }} onClick={onClick} className="cursor-pointer">
+          <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '12px', lineHeight: 1.2, outline: 'none' }} contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('title', e.currentTarget.innerText)}>{block.content.title}</h1>
+          <p style={{ fontSize: '16px', marginBottom: '24px', opacity: 0.9, lineHeight: 1.5, outline: 'none' }} contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('subtitle', e.currentTarget.innerText)}>{block.content.subtitle}</p>
+          {block.content.buttonText && (
+            <div style={{ display: 'inline-block', backgroundColor: '#111827', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold' }}>
+              {block.content.buttonText}
+            </div>
+          )}
+        </div>
+      );
+    case 'video':
+      let videoUrl = block.content.url || '';
+      if (videoUrl.includes('youtube.com/watch?v=')) videoUrl = videoUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/');
+      else if (videoUrl.includes('youtu.be/')) videoUrl = videoUrl.replace('youtu.be/', 'youtube.com/embed/');
+      return (
+        <div style={{ padding: s.padding, margin: s.margin, borderRadius: s.borderRadius, overflow: 'hidden', backgroundColor: '#000' }} onClick={onClick} className="cursor-pointer">
+          <iframe width="100%" height="315" src={videoUrl} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="pointer-events-none block w-full border-none"></iframe>
+        </div>
+      );
+    case 'faq':
+      return (
+        <div style={{ padding: s.padding, margin: s.margin, borderRadius: s.borderRadius, backgroundColor: s.backgroundColor }} onClick={onClick} className="cursor-pointer">
+          <details className="mb-2 rounded-lg border border-gray-200 bg-white p-3" open>
+            <summary className="cursor-pointer font-semibold text-gray-900 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('question1', e.currentTarget.innerText)}>{block.content.question1}</summary>
+            <div className="mt-2 text-sm text-gray-600 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('answer1', e.currentTarget.innerText)}>{block.content.answer1}</div>
+          </details>
+          <details className="rounded-lg border border-gray-200 bg-white p-3">
+            <summary className="cursor-pointer font-semibold text-gray-900 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('question2', e.currentTarget.innerText)}>{block.content.question2}</summary>
+            <div className="mt-2 text-sm text-gray-600 outline-none" contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('answer2', e.currentTarget.innerText)}>{block.content.answer2}</div>
+          </details>
+        </div>
+      );
+    case 'footer':
+      return (
+        <div style={{ textAlign: 'center', padding: s.padding, margin: s.margin, backgroundColor: s.backgroundColor, color: s.color, fontSize: '12px', borderRadius: s.borderRadius }} onClick={onClick} className="cursor-pointer">
+          <div style={{ marginBottom: '8px', fontWeight: 'bold', outline: 'none' }} contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('brandName', e.currentTarget.innerText)}>{block.content.brandName}</div>
+          <div style={{ opacity: 0.8, outline: 'none' }} contentEditable suppressContentEditableWarning onBlur={(e) => onContentChange('contactInfo', e.currentTarget.innerText)}>{block.content.contactInfo}</div>
+          <div style={{ marginTop: '16px', opacity: 0.6 }}>&copy; {new Date().getFullYear()} Hak Cipta Dilindungi.</div>
+        </div>
+      );
     default:
       return null;
   }
@@ -456,6 +551,29 @@ function PropertiesPanel({
           {input('Harga Normal', 'originalPrice', c.originalPrice || '')}
           {input('Harga Promo', 'salePrice', c.salePrice || '')}
           {input('Label', 'label', c.label || '')}
+        </>
+      )}
+      {block.type === 'hero' && (
+        <>
+          {input('Judul', 'title', c.title || '')}
+          {input('Subjudul', 'subtitle', c.subtitle || '')}
+          {input('Teks Tombol', 'buttonText', c.buttonText || '')}
+          {input('Link Tombol', 'buttonLink', c.buttonLink || '')}
+        </>
+      )}
+      {block.type === 'video' && input('URL Video YouTube', 'url', c.url || '')}
+      {block.type === 'faq' && (
+        <>
+          {input('Pertanyaan 1', 'question1', c.question1 || '')}
+          {input('Jawaban 1', 'answer1', c.answer1 || '')}
+          {input('Pertanyaan 2', 'question2', c.question2 || '')}
+          {input('Jawaban 2', 'answer2', c.answer2 || '')}
+        </>
+      )}
+      {block.type === 'footer' && (
+        <>
+          {input('Nama Brand', 'brandName', c.brandName || '')}
+          {input('Info Kontak', 'contactInfo', c.contactInfo || '')}
         </>
       )}
 

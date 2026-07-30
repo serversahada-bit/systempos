@@ -6,7 +6,11 @@ export type BlockType =
   | 'divider'
   | 'list'
   | 'testimonial'
-  | 'pricing';
+  | 'pricing'
+  | 'hero'
+  | 'video'
+  | 'faq'
+  | 'footer';
 
 export interface Block {
   id: string;
@@ -86,6 +90,39 @@ export function renderBlocksToHtml(blocks: Block[]) {
           )}</div><span style="background:#fef9c3;color:#92400e;font-size:11px;font-weight:700;padding:2px 10px;border-radius:50px">${nl2br(
             block.content.label || ''
           )}</span></div>`;
+        case 'hero':
+          return `<div style="text-align:${s.textAlign};padding:${s.padding};background-color:${s.backgroundColor};color:${s.color};border-radius:${s.borderRadius};margin:${s.margin}">
+            <h1 style="font-size:32px;font-weight:800;margin-bottom:12px;line-height:1.2">${nl2br(block.content.title || '')}</h1>
+            <p style="font-size:16px;margin-bottom:24px;opacity:0.9;line-height:1.5">${nl2br(block.content.subtitle || '')}</p>
+            ${block.content.buttonText ? `<a href="${escapeHtml(block.content.buttonLink || '#')}" style="display:inline-block;background-color:#111827;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">${escapeHtml(block.content.buttonText)}</a>` : ''}
+          </div>`;
+        case 'video':
+          let videoUrl = block.content.url || '';
+          if (videoUrl.includes('youtube.com/watch?v=')) {
+            videoUrl = videoUrl.replace('youtube.com/watch?v=', 'youtube.com/embed/');
+          } else if (videoUrl.includes('youtu.be/')) {
+            videoUrl = videoUrl.replace('youtu.be/', 'youtube.com/embed/');
+          }
+          return `<div style="padding:${s.padding};margin:${s.margin};border-radius:${s.borderRadius};overflow:hidden;background:#000">
+            <iframe width="100%" height="315" src="${escapeHtml(videoUrl)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display:block;width:100%;border:none;"></iframe>
+          </div>`;
+        case 'faq':
+          return `<div style="padding:${s.padding};margin:${s.margin};border-radius:${s.borderRadius};background-color:${s.backgroundColor}">
+            <details style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px">
+              <summary style="font-weight:600;cursor:pointer;color:#111827">${escapeHtml(block.content.question1 || '')}</summary>
+              <div style="margin-top:8px;font-size:14px;color:#4b5563;line-height:1.5">${nl2br(block.content.answer1 || '')}</div>
+            </details>
+            <details style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px">
+              <summary style="font-weight:600;cursor:pointer;color:#111827">${escapeHtml(block.content.question2 || '')}</summary>
+              <div style="margin-top:8px;font-size:14px;color:#4b5563;line-height:1.5">${nl2br(block.content.answer2 || '')}</div>
+            </details>
+          </div>`;
+        case 'footer':
+          return `<div style="text-align:center;padding:${s.padding};margin:${s.margin};background-color:${s.backgroundColor};color:${s.color};font-size:12px;border-radius:${s.borderRadius}">
+            <div style="margin-bottom:8px;font-weight:bold">${escapeHtml(block.content.brandName || '')}</div>
+            <div style="opacity:0.8">${nl2br(block.content.contactInfo || '')}</div>
+            <div style="margin-top:16px;opacity:0.6">&copy; ${new Date().getFullYear()} Hak Cipta Dilindungi.</div>
+          </div>`;
         default:
           return '';
       }
