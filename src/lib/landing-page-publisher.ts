@@ -70,6 +70,37 @@ async function findCommand(command: string) {
   return null;
 }
 
+function buildSshOptions({
+  useKeyAuth,
+  sshKeyPath,
+  usePasswordAuth,
+}: {
+  useKeyAuth: boolean;
+  sshKeyPath?: string;
+  usePasswordAuth: boolean;
+}) {
+  const args = ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'];
+
+  if (usePasswordAuth) {
+    args.push(
+      '-o',
+      'PreferredAuthentications=password',
+      '-o',
+      'PubkeyAuthentication=no',
+      '-o',
+      'BatchMode=no',
+      '-o',
+      'NumberOfPasswordPrompts=1'
+    );
+  }
+
+  if (useKeyAuth && sshKeyPath) {
+    args.push('-i', sshKeyPath);
+  }
+
+  return args;
+}
+
 function buildRemoteSlugPath(basePath: string, slug: string) {
   const safeSlug = sanitizeSlug(slug);
   const normalizedBase = basePath.replace(/\\/g, '/').replace(/\/+$/, '');
@@ -157,11 +188,12 @@ async function deployWithSftp({
   const remotePath = buildRemoteSlugPath(basePath, slug);
   const sshCommand = await findCommand('ssh');
   const sftpCommand = await findCommand('sftp');
+  const scpCommand = await findCommand('scp');
 
-  if (!sshCommand || !sftpCommand) {
+  if (!sshCommand || (!sftpCommand && !scpCommand)) {
     return {
       status: 'failed' as const,
-      message: 'Command ssh/sftp tidak tersedia di server builder.',
+      message: 'Command ssh dan metode upload (scp/sftp) tidak tersedia di server builder.',
       remotePath,
     };
   }
@@ -187,30 +219,11 @@ async function deployWithSftp({
     };
   }
 
-  const tempDir = path.join(process.cwd(), '.tmp', 'lp-publish');
-  await mkdir(tempDir, { recursive: true });
-
-  const sshArgs = ['-p', port, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'];
-  if (useKeyAuth && sshKeyPath) {
-    sshArgs.push('-i', sshKeyPath);
-  }
+  const commonSshOptions = buildSshOptions({ useKeyAuth, sshKeyPath, usePasswordAuth });
+  const sshArgs = ['-p', port, ...commonSshOptions];
   sshArgs.push(`${username}@${host}`, `mkdir -p "${remotePath}"`);
 
-  const sftpBatchFile = path.join(tempDir, `sftp-${sanitizeSlug(slug)}-${Date.now()}.txt`);
   const normalizedLocalDir = localDir.replace(/\\/g, '/');
-  const batchContent = [
-    `mkdir "${remotePath}/assets"`,
-    `put "${normalizedLocalDir}/index.html" "${remotePath}/index.html"`,
-    `put "${normalizedLocalDir}/style.css" "${remotePath}/style.css"`,
-    `put "${normalizedLocalDir}/script.js" "${remotePath}/script.js"`,
-  ];
-
-  const assetsLocalDir = path.join(localDir, 'assets');
-  if (await pathExists(assetsLocalDir)) {
-    batchContent.push(`put -r "${assetsLocalDir.replace(/\\/g, '/')}" "${remotePath}/assets"`);
-  }
-
-  await writeFile(sftpBatchFile, `${batchContent.join('\n')}\n`, 'utf8');
 
   try {
     if (usePasswordAuth && sshpassCommand) {
@@ -220,26 +233,75 @@ async function deployWithSftp({
         { windowsHide: true, timeout: 30000 }
       );
 
-      const sftpArgs = ['-P', port, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'];
-      sftpArgs.push('-b', sftpBatchFile);
-      sftpArgs.push(`${username}@${host}`);
+      if (scpCommand && process.platform !== 'win32') {
+        const scpArgs = ['-P', port, ...commonSshOptions, '-r', `${normalizedLocalDir}/.`, `${username}@${host}:${remotePath}/`];
 
-      await execFileAsync(
-        sshpassCommand,
-        ['-p', password!, sftpCommand, ...sftpArgs],
-        { windowsHide: true, timeout: 60000 }
-      );
+        await execFileAsync(
+          sshpassCommand,
+          ['-p', password!, scpCommand, ...scpArgs],
+          { windowsHide: true, timeout: 60000 }
+        );
+      } else if (sftpCommand) {
+        const tempDir = path.join(process.cwd(), '.tmp', 'lp-publish');
+        await mkdir(tempDir, { recursive: true });
+
+        const sftpBatchFile = path.join(tempDir, `sftp-${sanitizeSlug(slug)}-${Date.now()}.txt`);
+        const batchContent = [
+          `mkdir "${remotePath}/assets"`,
+          `put "${normalizedLocalDir}/index.html" "${remotePath}/index.html"`,
+          `put "${normalizedLocalDir}/style.css" "${remotePath}/style.css"`,
+          `put "${normalizedLocalDir}/script.js" "${remotePath}/script.js"`,
+          `put "${normalizedLocalDir}/manifest.json" "${remotePath}/manifest.json"`,
+        ];
+
+        const assetsLocalDir = path.join(localDir, 'assets');
+        if (await pathExists(assetsLocalDir)) {
+          batchContent.push(`put -r "${assetsLocalDir.replace(/\\/g, '/')}" "${remotePath}/assets"`);
+        }
+
+        await writeFile(sftpBatchFile, `${batchContent.join('\n')}\n`, 'utf8');
+
+        const sftpArgs = ['-P', port, ...commonSshOptions, '-b', sftpBatchFile, `${username}@${host}`];
+
+        await execFileAsync(
+          sshpassCommand,
+          ['-p', password!, sftpCommand, ...sftpArgs],
+          { windowsHide: true, timeout: 60000 }
+        );
+      } else {
+        throw new Error('Tidak ada command upload yang tersedia.');
+      }
     } else {
       await execFileAsync(sshCommand, sshArgs, { windowsHide: true, timeout: 30000 });
 
-      const sftpArgs = ['-P', port, '-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'];
-      if (useKeyAuth && sshKeyPath) {
-        sftpArgs.push('-i', sshKeyPath);
-      }
-      sftpArgs.push('-b', sftpBatchFile);
-      sftpArgs.push(`${username}@${host}`);
+      if (scpCommand && process.platform !== 'win32') {
+        const scpArgs = ['-P', port, ...commonSshOptions, '-r', `${normalizedLocalDir}/.`, `${username}@${host}:${remotePath}/`];
+        await execFileAsync(scpCommand, scpArgs, { windowsHide: true, timeout: 60000 });
+      } else if (sftpCommand) {
+        const tempDir = path.join(process.cwd(), '.tmp', 'lp-publish');
+        await mkdir(tempDir, { recursive: true });
 
-      await execFileAsync(sftpCommand, sftpArgs, { windowsHide: true, timeout: 60000 });
+        const sftpBatchFile = path.join(tempDir, `sftp-${sanitizeSlug(slug)}-${Date.now()}.txt`);
+        const batchContent = [
+          `mkdir "${remotePath}/assets"`,
+          `put "${normalizedLocalDir}/index.html" "${remotePath}/index.html"`,
+          `put "${normalizedLocalDir}/style.css" "${remotePath}/style.css"`,
+          `put "${normalizedLocalDir}/script.js" "${remotePath}/script.js"`,
+          `put "${normalizedLocalDir}/manifest.json" "${remotePath}/manifest.json"`,
+        ];
+
+        const assetsLocalDir = path.join(localDir, 'assets');
+        if (await pathExists(assetsLocalDir)) {
+          batchContent.push(`put -r "${assetsLocalDir.replace(/\\/g, '/')}" "${remotePath}/assets"`);
+        }
+
+        await writeFile(sftpBatchFile, `${batchContent.join('\n')}\n`, 'utf8');
+
+        const sftpArgs = ['-P', port, ...commonSshOptions, '-b', sftpBatchFile, `${username}@${host}`];
+        await execFileAsync(sftpCommand, sftpArgs, { windowsHide: true, timeout: 60000 });
+      } else {
+        throw new Error('Tidak ada command upload yang tersedia.');
+      }
     }
 
     return {
